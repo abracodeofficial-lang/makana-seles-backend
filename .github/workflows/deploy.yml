@@ -11,6 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ما في داعي نرفع تاريخ الـ git نفسه عالسيرفر — وبيسبب "Permission denied"
+      # على ملفات .git/objects/pack (read-only) لما يحاول السيرفر يفك الأرشيف
+      - name: Remove .git before upload
+        run: rm -rf .git
+
       # ينسخ كل ملفات الريبو (ما عدا .env / vendor / storage — مو موجودين بالريبو أصلاً) فوق السيرفر
       # بدون حذف أي شي مو موجود بالريبو (يعني .env والملفات المرفوعة تبقى زي ما هي)
       - name: Upload files via SCP

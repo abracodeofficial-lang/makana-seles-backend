@@ -128,6 +128,13 @@ class EmployeeController extends BaseController
         ]);
 
         $data['password'] = Hash::make($data['password']);
+
+        // الحقول المالية غير nullable بقاعدة البيانات (قيمتها الافتراضية 0) —
+        // لو انبعتت فاضية بتتحول null من Laravel وبترفضها قاعدة البيانات صراحة
+        foreach (['basic_salary', 'housing_allowance', 'transport_allowance', 'phone_allowance', 'other_allowances', 'commission_rate'] as $field) {
+            $data[$field] = $data[$field] ?? 0;
+        }
+
         $employee = Employee::create($data);
 
         // تعيين مجموعة الصلاحيات

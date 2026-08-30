@@ -43,7 +43,7 @@ class PermissionRequestController extends BaseController
 
         NotificationLog::sendToApprovers('permissions', 'طلب إذن جديد',
             "قدم {$employee->full_name} طلب إذن ({$data['type']})",
-            'معلومة', "/permissions/{$perm->id}");
+            'معلومة', '/permissions');
 
         return $this->success($perm, 'تم إرسال طلب الإذن بنجاح', 201);
     }

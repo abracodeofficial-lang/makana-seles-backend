@@ -59,7 +59,7 @@ class LeaveRequestController extends BaseController
 
         NotificationLog::sendToApprovers('leave_requests', 'طلب إجازة جديد',
             "قدم {$employee->full_name} طلب إجازة من {$data['from_date']} إلى {$data['to_date']}",
-            'معلومة', "/leave-requests/{$req->id}");
+            'معلومة', '/leaves');
 
         return $this->success($req->load('leaveType'), 'تم إرسال طلب الإجازة بنجاح', 201);
     }

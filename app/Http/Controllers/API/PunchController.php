@@ -9,11 +9,22 @@ use Illuminate\Http\Request;
 
 class PunchController extends BaseController
 {
+    // يرجّع تاريخ/وقت جهاز الموظف نفسه (مو وقت السيرفر) — بيوصلوا بالـ request
+    private function clientDate(Request $request): string
+    {
+        return $request->input('date') ?: today()->toDateString();
+    }
+
+    private function clientTime(Request $request): string
+    {
+        return $request->input('time') ?: now()->format('H:i');
+    }
+
     // ── حالة اليوم للموظف المسجّل ────────────────────────────
-    public function today(): JsonResponse
+    public function today(Request $request): JsonResponse
     {
         $employee = auth()->user()->load('shift', 'department');
-        $today    = today()->toDateString();
+        $today    = $this->clientDate($request);
 
         $record = Attendance::where('employee_id', $employee->id)
             ->whereDate('date', $today)
@@ -43,11 +54,11 @@ class PunchController extends BaseController
     }
 
     // ── بصمة الحضور ─────────────────────────────────────────
-    public function checkIn(): JsonResponse
+    public function checkIn(Request $request): JsonResponse
     {
         $employee = auth()->user()->load('shift');
-        $today    = today()->toDateString();
-        $now      = now()->format('H:i');
+        $today    = $this->clientDate($request);
+        $now      = $this->clientTime($request);
 
         $existing = Attendance::where('employee_id', $employee->id)
             ->whereDate('date', $today)->first();
@@ -90,10 +101,10 @@ class PunchController extends BaseController
     }
 
     // ── بصمة الانصراف ───────────────────────────────────────
-    public function checkOut(): JsonResponse
+    public function checkOut(Request $request): JsonResponse
     {
         $employee = auth()->user();
-        $today    = today()->toDateString();
+        $today    = $this->clientDate($request);
 
         $record = Attendance::where('employee_id', $employee->id)
             ->whereDate('date', $today)->first();
@@ -105,16 +116,16 @@ class PunchController extends BaseController
             return $this->error('تم تسجيل الانصراف مسبقاً اليوم');
         }
 
-        $record->update(['check_out' => now()->format('H:i')]);
+        $record->update(['check_out' => $this->clientTime($request)]);
 
         return $this->success($record, 'تم تسجيل الانصراف بنجاح');
     }
 
     // ── بدء الاستراحة ───────────────────────────────────────
-    public function breakStart(): JsonResponse
+    public function breakStart(Request $request): JsonResponse
     {
         $employee = auth()->user();
-        $today    = today()->toDateString();
+        $today    = $this->clientDate($request);
 
         $record = Attendance::where('employee_id', $employee->id)
             ->whereDate('date', $today)->first();
@@ -126,16 +137,16 @@ class PunchController extends BaseController
             return $this->error('تم تسجيل بدء الاستراحة مسبقاً');
         }
 
-        $record->update(['break_start' => now()->format('H:i')]);
+        $record->update(['break_start' => $this->clientTime($request)]);
 
         return $this->success($record, 'تم تسجيل بدء الاستراحة');
     }
 
     // ── انتهاء الاستراحة ────────────────────────────────────
-    public function breakEnd(): JsonResponse
+    public function breakEnd(Request $request): JsonResponse
     {
         $employee = auth()->user();
-        $today    = today()->toDateString();
+        $today    = $this->clientDate($request);
 
         $record = Attendance::where('employee_id', $employee->id)
             ->whereDate('date', $today)->first();
@@ -147,7 +158,7 @@ class PunchController extends BaseController
             return $this->error('تم تسجيل انتهاء الاستراحة مسبقاً');
         }
 
-        $record->update(['break_end' => now()->format('H:i')]);
+        $record->update(['break_end' => $this->clientTime($request)]);
 
         return $this->success($record, 'تم تسجيل انتهاء الاستراحة');
     }

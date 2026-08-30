@@ -73,6 +73,28 @@ class LeaveRequest extends Model
         ]);
     }
 
+    // إرجاع الطلب للموظف لتوضيح إضافي — المدير
+    public function returnByManager(int $managerId, string $notes): void
+    {
+        $this->update([
+            'manager_status'      => 'إرجاع',
+            'manager_notes'       => $notes,
+            'manager_id'          => $managerId,
+            'manager_decision_at' => now(),
+        ]);
+    }
+
+    // إرجاع الطلب للموظف لتوضيح إضافي — HR
+    public function returnByHR(int $hrId, string $notes): void
+    {
+        $this->update([
+            'hr_status'      => 'إرجاع',
+            'hr_notes'       => $notes,
+            'hr_employee_id' => $hrId,
+            'hr_decision_at' => now(),
+        ]);
+    }
+
     // اعتماد HR — ينشئ auto_leave ويحدّث الرصيد والحضور
     public function approveByHR(int $hrId, ?string $notes = null): void
     {

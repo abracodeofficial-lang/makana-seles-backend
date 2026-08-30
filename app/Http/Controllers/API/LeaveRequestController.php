@@ -70,6 +70,9 @@ class LeaveRequestController extends BaseController
         $req = LeaveRequest::where('manager_status','قيد الانتظار')->findOrFail($id);
         $req->approveByManager($request->user()->id, $request->notes);
         NotificationLog::send($req->employee_id, 'موافقة المدير على إجازتك', 'وافق المدير على طلب إجازتك وهو الآن قيد مراجعة HR', 'معلومة');
+        NotificationLog::sendToApprovers('leave_requests', 'طلب إجازة بانتظار اعتماد HR',
+            "وافق المدير على طلب إجازة {$req->employee->full_name} — بانتظار اعتماد الموارد البشرية",
+            'معلومة', '/leaves');
         return $this->success(null, 'تمت الموافقة وإحالتها لـ HR');
     }
 
@@ -80,6 +83,16 @@ class LeaveRequestController extends BaseController
         $req->rejectByManager($request->user()->id, $request->notes);
         NotificationLog::send($req->employee_id, 'رفض طلب الإجازة', "تم رفض طلب إجازتك: {$request->notes}", 'تحذير');
         return $this->success(null, 'تم رفض الطلب');
+    }
+
+    public function managerInquire(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['notes' => 'required|string']);
+        $req = LeaveRequest::findOrFail($id);
+        $req->returnByManager($request->user()->id, $request->notes);
+        NotificationLog::send($req->employee_id, 'استفسار على طلب إجازتك',
+            "طلب المدير توضيحاً بخصوص طلب إجازتك: {$request->notes}", 'تحذير');
+        return $this->success(null, 'تم إرسال الاستفسار للموظف');
     }
 
     public function hrApprove(Request $request, int $id): JsonResponse
@@ -99,5 +112,15 @@ class LeaveRequestController extends BaseController
         $req->rejectByHR($request->user()->id, $request->notes);
         NotificationLog::send($req->employee_id, 'رفض طلب الإجازة من HR', "رفض قسم HR طلب إجازتك: {$request->notes}", 'تحذير');
         return $this->success(null, 'تم رفض الطلب');
+    }
+
+    public function hrInquire(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['notes' => 'required|string']);
+        $req = LeaveRequest::findOrFail($id);
+        $req->returnByHR($request->user()->id, $request->notes);
+        NotificationLog::send($req->employee_id, 'استفسار على طلب إجازتك',
+            "طلب قسم الموارد البشرية توضيحاً بخصوص طلب إجازتك: {$request->notes}", 'تحذير');
+        return $this->success(null, 'تم إرسال الاستفسار للموظف');
     }
 }

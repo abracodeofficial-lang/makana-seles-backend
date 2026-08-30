@@ -153,8 +153,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/',                   [LeaveRequestController::class, 'store']);
         Route::patch('{id}/manager-approve',[LeaveRequestController::class, 'managerApprove']);
         Route::patch('{id}/manager-reject', [LeaveRequestController::class, 'managerReject']);
+        Route::patch('{id}/manager-inquire',[LeaveRequestController::class, 'managerInquire']);
         Route::patch('{id}/hr-approve',    [LeaveRequestController::class, 'hrApprove']);
         Route::patch('{id}/hr-reject',     [LeaveRequestController::class, 'hrReject']);
+        Route::patch('{id}/hr-inquire',    [LeaveRequestController::class, 'hrInquire']);
     });
 
     // الإذونات

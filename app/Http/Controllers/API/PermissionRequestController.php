@@ -37,8 +37,13 @@ class PermissionRequestController extends BaseController
             'request_datetime' => 'required|date',
         ]);
 
-        $data['employee_id'] = $request->user()->id;
+        $employee = $request->user();
+        $data['employee_id'] = $employee->id;
         $perm = PermissionRequest::create($data);
+
+        NotificationLog::sendToApprovers('permissions', 'طلب إذن جديد',
+            "قدم {$employee->full_name} طلب إذن ({$data['type']})",
+            'معلومة', "/permissions/{$perm->id}");
 
         return $this->success($perm, 'تم إرسال طلب الإذن بنجاح', 201);
     }

@@ -32,4 +32,13 @@ class NotificationLog extends Model
             'url'         => $url,
         ]);
     }
+
+    // إشعار كل من يملك صلاحية "اعتماد" على صفحة معينة (مدير النظام، الموارد البشرية...)
+    public static function sendToApprovers(string $page, string $title, string $body, string $type = 'معلومة', ?string $url = null): void
+    {
+        Employee::active()
+            ->get(['id'])
+            ->filter(fn($employee) => $employee->hasPermission($page, 'approve'))
+            ->each(fn($employee) => static::send($employee->id, $title, $body, $type, $url));
+    }
 }

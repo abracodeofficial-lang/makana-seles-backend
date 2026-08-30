@@ -91,7 +91,7 @@ class LeaveRequestController extends BaseController
         $req = LeaveRequest::findOrFail($id);
         $req->returnByManager($request->user()->id, $request->notes);
         NotificationLog::send($req->employee_id, 'استفسار على طلب إجازتك',
-            "طلب المدير توضيحاً بخصوص طلب إجازتك: {$request->notes}", 'تحذير');
+            "طلب المدير توضيحاً بخصوص طلب إجازتك: {$request->notes}", 'تحذير', '/leaves');
         return $this->success(null, 'تم إرسال الاستفسار للموظف');
     }
 
@@ -120,7 +120,7 @@ class LeaveRequestController extends BaseController
         $req = LeaveRequest::findOrFail($id);
         $req->returnByHR($request->user()->id, $request->notes);
         NotificationLog::send($req->employee_id, 'استفسار على طلب إجازتك',
-            "طلب قسم الموارد البشرية توضيحاً بخصوص طلب إجازتك: {$request->notes}", 'تحذير');
+            "طلب قسم الموارد البشرية توضيحاً بخصوص طلب إجازتك: {$request->notes}", 'تحذير', '/leaves');
         return $this->success(null, 'تم إرسال الاستفسار للموظف');
     }
 
@@ -138,7 +138,7 @@ class LeaveRequestController extends BaseController
         $req->clarify($request->clarification);
 
         NotificationLog::sendToApprovers('leave_requests', 'رد الموظف على الاستفسار',
-            "قدّم {$req->employee->full_name} توضيحاً على طلب الإجازة {$req->request_number}",
+            "رد {$req->employee->full_name} على استفساركم بخصوص طلب الإجازة {$req->request_number}: {$request->clarification}",
             'معلومة', '/leaves');
 
         return $this->success($req->fresh(), 'تم إرسال التوضيح، الطلب أصبح قيد المراجعة مجدداً');

@@ -157,6 +157,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('{id}/hr-approve',    [LeaveRequestController::class, 'hrApprove']);
         Route::patch('{id}/hr-reject',     [LeaveRequestController::class, 'hrReject']);
         Route::patch('{id}/hr-inquire',    [LeaveRequestController::class, 'hrInquire']);
+        Route::patch('{id}/clarify',       [LeaveRequestController::class, 'clarify']);
     });
 
     // الإذونات

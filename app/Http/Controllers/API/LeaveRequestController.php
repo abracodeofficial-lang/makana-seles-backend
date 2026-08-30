@@ -123,4 +123,24 @@ class LeaveRequestController extends BaseController
             "طلب قسم الموارد البشرية توضيحاً بخصوص طلب إجازتك: {$request->notes}", 'تحذير');
         return $this->success(null, 'تم إرسال الاستفسار للموظف');
     }
+
+    // رد الموظف على استفسار المدير/HR على نفس الطلب (بدون تقديم طلب جديد)
+    public function clarify(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['clarification' => 'required|string']);
+
+        $req = LeaveRequest::where('employee_id', $request->user()->id)->findOrFail($id);
+
+        if ($req->manager_status !== 'إرجاع' && $req->hr_status !== 'إرجاع') {
+            return $this->error('هذا الطلب لا ينتظر توضيحاً حالياً', 422);
+        }
+
+        $req->clarify($request->clarification);
+
+        NotificationLog::sendToApprovers('leave_requests', 'رد الموظف على الاستفسار',
+            "قدّم {$req->employee->full_name} توضيحاً على طلب الإجازة {$req->request_number}",
+            'معلومة', '/leaves');
+
+        return $this->success($req->fresh(), 'تم إرسال التوضيح، الطلب أصبح قيد المراجعة مجدداً');
+    }
 }

@@ -13,7 +13,7 @@ class LeaveRequest extends Model
 {
     protected $fillable = [
         'request_number', 'employee_id', 'leave_type_id',
-        'from_date', 'to_date', 'days_count', 'reason', 'attachment_path',
+        'from_date', 'to_date', 'days_count', 'reason', 'clarification', 'attachment_path',
         'manager_status', 'manager_notes', 'manager_id', 'manager_decision_at',
         'hr_status', 'hr_notes', 'hr_employee_id', 'hr_decision_at',
         'final_status',
@@ -144,6 +144,15 @@ class LeaveRequest extends Model
             'hr_decision_at' => now(),
             'final_status'   => 'مرفوضة',
         ]);
+    }
+
+    // رد الموظف على استفسار المدير/HR — يرجّع الطلب لقيد الانتظار بنفس المرحلة اللي أرجعته
+    public function clarify(string $text): void
+    {
+        $data = ['clarification' => $text];
+        if ($this->manager_status === 'إرجاع') $data['manager_status'] = 'قيد الانتظار';
+        if ($this->hr_status === 'إرجاع')      $data['hr_status']      = 'قيد الانتظار';
+        $this->update($data);
     }
 
     // auto-generate request_number

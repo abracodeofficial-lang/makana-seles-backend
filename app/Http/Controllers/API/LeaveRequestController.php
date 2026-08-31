@@ -67,7 +67,8 @@ class LeaveRequestController extends BaseController
     public function managerApprove(Request $request, int $id): JsonResponse
     {
         $request->validate(['notes' => 'nullable|string']);
-        $req = LeaveRequest::where('manager_status','قيد الانتظار')->findOrFail($id);
+        $req = LeaveRequest::whereIn('manager_status', ['قيد الانتظار', 'إرجاع'])->find($id);
+        if (!$req) return $this->error('لا يمكن الموافقة على هذا الطلب بحالته الحالية', 422);
         $req->approveByManager($request->user()->id, $request->notes);
         NotificationLog::send($req->employee_id, 'موافقة المدير على إجازتك', 'وافق المدير على طلب إجازتك وهو الآن قيد مراجعة HR', 'معلومة');
         NotificationLog::sendToApprovers('leave_requests', 'طلب إجازة بانتظار اعتماد HR',
@@ -98,7 +99,9 @@ class LeaveRequestController extends BaseController
     public function hrApprove(Request $request, int $id): JsonResponse
     {
         $request->validate(['notes' => 'nullable|string']);
-        $req = LeaveRequest::where('manager_status','موافق')->findOrFail($id);
+        $req = LeaveRequest::where('manager_status','موافق')
+            ->whereIn('hr_status', ['قيد الانتظار', 'إرجاع'])->find($id);
+        if (!$req) return $this->error('لا يمكن الاعتماد على هذا الطلب بحالته الحالية', 422);
         $req->approveByHR($request->user()->id, $request->notes);
         NotificationLog::send($req->employee_id, 'اعتماد إجازتك',
             "تم اعتماد إجازتك من {$req->from_date->format('Y-m-d')} إلى {$req->to_date->format('Y-m-d')}", 'نجاح');

@@ -53,7 +53,7 @@ class PermissionRequestController extends BaseController
         $request->validate(['notes' => 'nullable|string']);
         $perm = PermissionRequest::where('final_status','قيد المراجعة')->findOrFail($id);
         $perm->approveByManager($request->user()->id, $request->notes);
-        NotificationLog::send($perm->employee_id, 'موافقة على طلب الإذن', 'تمت الموافقة على طلب الإذن الخاص بك', 'نجاح');
+        NotificationLog::send($perm->employee_id, 'موافقة على طلب الإذن', 'تمت الموافقة على طلب الإذن الخاص بك', 'نجاح', '/permissions');
         return $this->success(null, 'تمت الموافقة على الإذن');
     }
 
@@ -62,7 +62,37 @@ class PermissionRequestController extends BaseController
         $request->validate(['notes' => 'required|string']);
         $perm = PermissionRequest::findOrFail($id);
         $perm->rejectByManager($request->user()->id, $request->notes);
-        NotificationLog::send($perm->employee_id, 'رفض طلب الإذن', "تم رفض طلب الإذن: {$request->notes}", 'تحذير');
+        NotificationLog::send($perm->employee_id, 'رفض طلب الإذن', "تم رفض طلب الإذن: {$request->notes}", 'تحذير', '/permissions');
         return $this->success(null, 'تم رفض الطلب');
+    }
+
+    public function inquire(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['notes' => 'required|string']);
+        $perm = PermissionRequest::findOrFail($id);
+        $perm->returnByManager($request->user()->id, $request->notes);
+        NotificationLog::send($perm->employee_id, 'استفسار على طلب الإذن',
+            "طلب المسؤول توضيحاً بخصوص طلب الإذن: {$request->notes}", 'تحذير', '/permissions');
+        return $this->success(null, 'تم إرسال الاستفسار للموظف');
+    }
+
+    // رد الموظف على استفسار المسؤول على نفس الطلب (بدون تقديم طلب جديد)
+    public function clarify(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['clarification' => 'required|string']);
+
+        $perm = PermissionRequest::where('employee_id', $request->user()->id)->findOrFail($id);
+
+        if ($perm->manager_status !== 'إرجاع') {
+            return $this->error('هذا الطلب لا ينتظر توضيحاً حالياً', 422);
+        }
+
+        $perm->clarify($request->clarification);
+
+        NotificationLog::sendToApprovers('permissions', 'رد الموظف على الاستفسار',
+            "رد {$perm->employee->full_name} على استفساركم بخصوص طلب الإذن {$perm->request_number}: {$request->clarification}",
+            'معلومة', '/permissions');
+
+        return $this->success($perm->fresh(), 'تم إرسال التوضيح، الطلب أصبح قيد المراجعة مجدداً');
     }
 }

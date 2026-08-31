@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PermissionRequest extends Model
 {
     protected $fillable = [
-        'request_number', 'employee_id', 'type', 'duration', 'reason',
+        'request_number', 'employee_id', 'type', 'duration', 'reason', 'clarification',
         'request_datetime',
         'manager_status', 'manager_notes', 'manager_id', 'manager_decision_at',
         'hr_status', 'hr_decision_at',
@@ -52,6 +52,26 @@ class PermissionRequest extends Model
             'manager_id'          => $managerId,
             'manager_decision_at' => now(),
             'final_status'        => 'مرفوض',
+        ]);
+    }
+
+    // إرجاع الطلب للموظف لتوضيح إضافي
+    public function returnByManager(int $managerId, string $notes): void
+    {
+        $this->update([
+            'manager_status'      => 'إرجاع',
+            'manager_notes'       => $notes,
+            'manager_id'          => $managerId,
+            'manager_decision_at' => now(),
+        ]);
+    }
+
+    // رد الموظف على استفسار المدير — يرجّع الطلب لقيد المراجعة
+    public function clarify(string $text): void
+    {
+        $this->update([
+            'clarification'  => $text,
+            'manager_status' => 'قيد المراجعة',
         ]);
     }
 

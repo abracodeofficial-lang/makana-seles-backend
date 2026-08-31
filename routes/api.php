@@ -164,8 +164,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('permission-requests')->group(function () {
         Route::get('/',             [PermissionRequestController::class, 'index']);
         Route::post('/',            [PermissionRequestController::class, 'store']);
-        Route::patch('{id}/approve',[PermissionRequestController::class, 'approve']);
-        Route::patch('{id}/reject', [PermissionRequestController::class, 'reject']);
+        Route::patch('{id}/approve', [PermissionRequestController::class, 'approve']);
+        Route::patch('{id}/reject',  [PermissionRequestController::class, 'reject']);
+        Route::patch('{id}/inquire', [PermissionRequestController::class, 'inquire']);
+        Route::patch('{id}/clarify', [PermissionRequestController::class, 'clarify']);
     });
 
     // الإشعارات

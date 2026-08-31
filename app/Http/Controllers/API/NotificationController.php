@@ -10,14 +10,18 @@ class NotificationController extends BaseController
 {
     public function index(Request $request): JsonResponse
     {
-        $query = NotificationLog::where('employee_id', $request->user()->id)->latest();
+        $base = NotificationLog::where('employee_id', $request->user()->id);
 
         $stats = [
-            'total'    => $query->clone()->count(),
-            'unread'   => $query->clone()->where('is_read', false)->count(),
-            'success'  => $query->clone()->where('type','نجاح')->count(),
-            'warnings' => $query->clone()->where('type','تحذير')->count(),
+            'total'    => $base->clone()->count(),
+            'unread'   => $base->clone()->where('is_read', false)->count(),
+            'success'  => $base->clone()->where('type','نجاح')->count(),
+            'warnings' => $base->clone()->where('type','تحذير')->count(),
         ];
+
+        $query = $base->clone()->latest();
+        if ($request->type)   $query->where('type', $request->type);
+        if ($request->unread) $query->where('is_read', false);
 
         return response()->json(['status'=>true,'stats'=>$stats,'data'=>$query->paginate(20)->toArray()]);
     }

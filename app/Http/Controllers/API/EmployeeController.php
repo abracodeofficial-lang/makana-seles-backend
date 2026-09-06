@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Mail\WelcomeEmployeeMail;
 use App\Models\{Employee, SalaryHistory, EmployeeDocument, LeaveBalance, NotificationLog};
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Hash, Storage};
+use Illuminate\Support\Facades\{Hash, Mail, Storage};
 
 class EmployeeController extends BaseController
 {
@@ -144,6 +145,8 @@ class EmployeeController extends BaseController
 
         // إنشاء رصيد الإجازات للسنة الحالية
         $this->initLeaveBalances($employee->id);
+
+        $this->sendWelcomeEmail($employee);
 
         NotificationLog::send(
             $request->user()->id,
@@ -321,6 +324,26 @@ class EmployeeController extends BaseController
         return $this->success($balances);
     }
 
+    // POST /api/employees/send-welcome-emails — إرسال جماعي لكل الموظفين اللي ما وصلهم إيميل بعد
+    public function sendWelcomeEmails(Request $request): JsonResponse
+    {
+        if (!$request->user()->hasPermission('employees', 'edit')) {
+            return $this->error('ليس لديك صلاحية لتنفيذ هذا الإجراء', 403);
+        }
+
+        $employees = Employee::whereNull('welcome_email_sent_at')->get();
+
+        $sent = 0;
+        foreach ($employees as $employee) {
+            if ($this->sendWelcomeEmail($employee)) $sent++;
+        }
+
+        return $this->success(
+            ['sent' => $sent, 'total_pending' => $employees->count()],
+            "تم إرسال {$sent} من أصل {$employees->count()} إيميل ترحيبي"
+        );
+    }
+
     // ---- Helper ----
     private function initLeaveBalances(int $employeeId): void
     {
@@ -330,6 +353,20 @@ class EmployeeController extends BaseController
                 ['employee_id' => $employeeId, 'leave_type_id' => $lt->id, 'year' => now()->year],
                 ['total_days' => $lt->total_days, 'used_days' => 0]
             );
+        }
+    }
+
+    private function sendWelcomeEmail(Employee $employee): bool
+    {
+        if (!$employee->email) return false;
+
+        try {
+            Mail::to($employee->email)->send(new WelcomeEmployeeMail($employee));
+            $employee->forceFill(['welcome_email_sent_at' => now()])->save();
+            return true;
+        } catch (\Throwable $e) {
+            report($e);
+            return false;
         }
     }
 }

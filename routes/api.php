@@ -107,6 +107,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('employees')->group(function () {
         Route::get('/',                         [EmployeeController::class, 'index']);
         Route::post('/',                        [EmployeeController::class, 'store']);
+        Route::post('send-welcome-emails',      [EmployeeController::class, 'sendWelcomeEmails']);
         Route::get('{id}',                      [EmployeeController::class, 'show']);
         Route::put('{id}',                      [EmployeeController::class, 'update']);
         Route::patch('{id}/suspend',            [EmployeeController::class, 'suspend']);

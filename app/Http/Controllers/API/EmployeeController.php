@@ -203,6 +203,34 @@ class EmployeeController extends BaseController
         return $this->success($employee->fresh('department'), 'تم تحديث بيانات الموظف');
     }
 
+    // PATCH /api/employees/{id}/reset-password — إعادة تعيين كلمة مرور الموظف من الأدمن
+    public function resetPassword(Request $request, int $id): JsonResponse
+    {
+        if (!$request->user()->hasPermission('employees', 'edit')) {
+            return $this->error('ليس لديك صلاحية لتنفيذ هذا الإجراء', 403);
+        }
+
+        $employee = Employee::findOrFail($id);
+
+        $data = $request->validate([
+            'password' => 'required|min:8',
+        ], [
+            'password.required' => 'كلمة المرور الجديدة مطلوبة',
+            'password.min'       => 'كلمة المرور يجب أن لا تقل عن 8 أحرف',
+        ]);
+
+        $employee->update(['password' => Hash::make($data['password'])]);
+
+        NotificationLog::send(
+            $employee->id,
+            'تم تغيير كلمة المرور',
+            'قام المسؤول بإعادة تعيين كلمة مرور حسابك، تواصل معه لمعرفة كلمة المرور الجديدة',
+            'تحذير'
+        );
+
+        return $this->success(null, 'تم تحديث كلمة مرور الموظف بنجاح');
+    }
+
     // PATCH /api/employees/{id}/suspend — إيقاف مؤقت
     public function suspend(int $id): JsonResponse
     {

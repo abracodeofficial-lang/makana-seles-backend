@@ -110,6 +110,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('send-welcome-emails',      [EmployeeController::class, 'sendWelcomeEmails']);
         Route::get('{id}',                      [EmployeeController::class, 'show']);
         Route::put('{id}',                      [EmployeeController::class, 'update']);
+        Route::patch('{id}/reset-password',     [EmployeeController::class, 'resetPassword']);
         Route::patch('{id}/suspend',            [EmployeeController::class, 'suspend']);
         Route::patch('{id}/activate',           [EmployeeController::class, 'activate']);
         Route::post('{id}/salary',              [EmployeeController::class, 'updateSalary']);

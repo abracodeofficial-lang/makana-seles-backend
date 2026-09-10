@@ -28,6 +28,9 @@ class OwnerController extends BaseController
         if ($request->city_id)          $query->where('city_id', $request->city_id);
         if ($request->date_from)        $query->whereDate('created_at', '>=', $request->date_from);
         if ($request->date_to)          $query->whereDate('created_at', '<=', $request->date_to);
+        if ($request->name)             $query->where('name', 'like', "%{$request->name}%");
+        if ($request->price_update_from) $query->whereDate('price_update_date', '>=', $request->price_update_from);
+        if ($request->price_update_to)   $query->whereDate('price_update_date', '<=', $request->price_update_to);
 
         // إحصائيات أعلى الصفحة
         $stats = [

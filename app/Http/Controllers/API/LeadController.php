@@ -27,6 +27,15 @@ class LeadController extends BaseController
         if ($request->update_status)     $query->where('update_status', $request->update_status);
         if ($request->property_type_id)  $query->where('property_type_id', $request->property_type_id);
         if ($request->employee_id)       $query->where('operation_employee_id', $request->employee_id);
+        if ($request->name)              $query->where('name', 'like', "%{$request->name}%");
+        if ($request->budget_min)        $query->where('budget', '>=', $request->budget_min);
+        if ($request->budget_max)        $query->where('budget', '<=', $request->budget_max);
+        if ($request->date_from)         $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->date_to)           $query->whereDate('created_at', '<=', $request->date_to);
+        if ($request->seriousness_level) $query->where('seriousness_level', $request->seriousness_level);
+        if ($request->follow_up_from)    $query->whereDate('follow_up_date', '>=', $request->follow_up_from);
+        if ($request->follow_up_to)      $query->whereDate('follow_up_date', '<=', $request->follow_up_to);
+        if ($request->source)            $query->where('source', $request->source);
 
         $stats = [
             'total'        => Lead::count(),

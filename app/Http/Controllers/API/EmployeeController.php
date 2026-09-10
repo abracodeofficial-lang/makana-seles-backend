@@ -38,7 +38,7 @@ class EmployeeController extends BaseController
         return response()->json([
             'status' => true,
             'stats'  => $stats,
-            'data'   => $query->latest()->paginate(12)->toArray(),
+            'data'   => $query->latest()->paginate($request->per_page ?: 12)->toArray(),
         ]);
     }
 

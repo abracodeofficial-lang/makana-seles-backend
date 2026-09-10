@@ -85,12 +85,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // المهتمون
     Route::prefix('leads')->group(function () {
-        Route::get('/',              [LeadController::class, 'index']);
-        Route::post('/',             [LeadController::class, 'store']);
-        Route::get('{id}',           [LeadController::class, 'show']);
-        Route::put('{id}',           [LeadController::class, 'update']);
-        Route::delete('{id}',        [LeadController::class, 'destroy']);
-        Route::patch('{id}/status',  [LeadController::class, 'updateStatus']);
+        Route::get('/',                        [LeadController::class, 'index']);
+        Route::post('/',                       [LeadController::class, 'store']);
+        Route::get('operation-dashboard',      [LeadController::class, 'operationDashboard']);
+        Route::get('{id}',                     [LeadController::class, 'show']);
+        Route::put('{id}',                     [LeadController::class, 'update']);
+        Route::delete('{id}',                  [LeadController::class, 'destroy']);
+        Route::patch('{id}/status',            [LeadController::class, 'updateStatus']);
+        Route::patch('{id}/operation-status',  [LeadController::class, 'updateOperationStatus']);
+        Route::patch('{id}/assign-specialist', [LeadController::class, 'assignSpecialist']);
+        Route::patch('{id}/specialist-stage',  [LeadController::class, 'updateSpecialistStage']);
     });
 
     // الزيارات
@@ -200,6 +204,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('property-types',        [LookupController::class, 'propertyTypesStore']);
         Route::put('property-types/{id}',    [LookupController::class, 'propertyTypesUpdate']);
         Route::delete('property-types/{id}', [LookupController::class, 'propertyTypesDestroy']);
+
+        // تخصيص موظفي الأوبريشن لأنواع العقارات
+        Route::get('operation-assignments',         [LookupController::class, 'operationAssignmentsIndex']);
+        Route::post('operation-assignments',        [LookupController::class, 'operationAssignmentsStore']);
+        Route::delete('operation-assignments/{id}', [LookupController::class, 'operationAssignmentsDestroy']);
 
         // الشفتات
         Route::get('shifts',         [LookupController::class, 'shiftsIndex']);

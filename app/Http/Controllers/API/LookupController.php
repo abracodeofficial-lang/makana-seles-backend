@@ -119,6 +119,38 @@ class LookupController extends Controller
         return response()->json(['status' => true, 'message' => 'تم الحذف']);
     }
 
+    // ── تخصيص موظفي الأوبريشن لأنواع العقارات ──────────────────
+
+    public function operationAssignmentsIndex()
+    {
+        return response()->json([
+            'status' => true,
+            'data'   => \App\Models\OperationPropertyTypeAssignment::with([
+                'employee:id,full_name',
+                'propertyType:id,name',
+            ])->get(),
+        ]);
+    }
+
+    public function operationAssignmentsStore(Request $request)
+    {
+        $data = $request->validate([
+            'employee_id'      => 'required|exists:employees,id',
+            'property_type_id' => 'required|exists:property_types,id',
+        ]);
+        $assignment = \App\Models\OperationPropertyTypeAssignment::firstOrCreate($data);
+        return response()->json([
+            'status' => true,
+            'data'   => $assignment->load(['employee:id,full_name', 'propertyType:id,name']),
+        ], 201);
+    }
+
+    public function operationAssignmentsDestroy(int $id)
+    {
+        \App\Models\OperationPropertyTypeAssignment::findOrFail($id)->delete();
+        return response()->json(['status' => true, 'message' => 'تم الحذف']);
+    }
+
     // ── Shifts ───────────────────────────────────────────────
 
     public function shiftsIndex()

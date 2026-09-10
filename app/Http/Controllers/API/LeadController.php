@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Models\{Lead, NotificationLog};
+use App\Models\{Lead, NotificationLog, Employee, Owner};
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,6 +14,7 @@ class LeadController extends BaseController
             'propertyType:id,name',
             'city:id,name',
             'operationEmployee:id,full_name',
+            'brokerEmployee:id,full_name',
             'createdBy:id,full_name',
         ]);
 
@@ -27,6 +28,9 @@ class LeadController extends BaseController
         if ($request->update_status)     $query->where('update_status', $request->update_status);
         if ($request->property_type_id)  $query->where('property_type_id', $request->property_type_id);
         if ($request->employee_id)       $query->where('operation_employee_id', $request->employee_id);
+        if ($request->specialist_id)     $query->where('broker_employee_id', $request->specialist_id);
+        if ($request->operation_status)  $query->where('operation_status', $request->operation_status);
+        if ($request->specialist_stage)  $query->where('specialist_stage', $request->specialist_stage);
         if ($request->name)              $query->where('name', 'like', "%{$request->name}%");
         if ($request->budget_min)        $query->where('budget', '>=', $request->budget_min);
         if ($request->budget_max)        $query->where('budget', '<=', $request->budget_max);
@@ -114,5 +118,96 @@ class LeadController extends BaseController
             'request_status' => $request->update_status === 'تم البيع' ? 'مغلق' : $lead->request_status,
         ]);
         return $this->success($lead->fresh(), 'تم تحديث الحالة');
+    }
+
+    // تحديث حالة الأوبريشن قبل التحويل للأخصائي
+    public function updateOperationStatus(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'operation_status' => 'required|in:' . implode(',', Lead::OPERATION_STATUSES),
+        ]);
+        $lead = Lead::findOrFail($id);
+        $lead->update($data);
+        return $this->success($lead->fresh(), 'تم تحديث حالة الأوبريشن');
+    }
+
+    // تحويل المهتم من الأوبريشن للأخصائي — يدوي، الأوبريشن يختار الأخصائي بنفسه
+    public function assignSpecialist(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'broker_employee_id' => 'required|exists:employees,id',
+        ]);
+        $lead = Lead::findOrFail($id);
+        $lead->update([
+            'broker_employee_id'        => $data['broker_employee_id'],
+            'assigned_to_specialist_at' => now(),
+            'specialist_stage'          => $lead->specialist_stage ?: 'تواصل',
+        ]);
+
+        NotificationLog::send(
+            $data['broker_employee_id'],
+            'مهتم جديد محوّل إليك',
+            "تم تحويل المهتم {$lead->name} ({$lead->lead_code}) إليك من الأوبريشن.",
+            'مهتم',
+            "/leads?lead={$lead->id}"
+        );
+
+        return $this->success($lead->fresh()->load('brokerEmployee:id,full_name'), 'تم تحويل المهتم للأخصائي');
+    }
+
+    // تحديث مرحلة الأخصائي — مرن بالترتيب، الوضوح أهم من التسلسل الصارم
+    public function updateSpecialistStage(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate([
+            'specialist_stage' => 'required|in:' . implode(',', Lead::SPECIALIST_STAGES),
+            'agreed_amount'    => 'required_if:specialist_stage,حجز|nullable|numeric|min:0',
+        ]);
+        $lead = Lead::findOrFail($id);
+        $lead->update([
+            'specialist_stage' => $data['specialist_stage'],
+            'agreed_amount'    => $data['specialist_stage'] === 'حجز' ? $data['agreed_amount'] : $lead->agreed_amount,
+        ]);
+
+        if ($data['specialist_stage'] === 'حجز') {
+            NotificationLog::sendToApprovers(
+                'finance',
+                'حجز جديد بحاجة لمتابعة',
+                "المهتم {$lead->name} ({$lead->lead_code}) وصل لمرحلة حجز بمبلغ متفق عليه " .
+                    number_format((float) $data['agreed_amount'], 2) . ' ريال.',
+                'حجز',
+                "/leads?lead={$lead->id}"
+            );
+        }
+
+        return $this->success($lead->fresh(), 'تم تحديث مرحلة الأخصائي');
+    }
+
+    // لوحة الأوبريشن: عدد المهتمين والملاك النشطين لكل موظف أوبريشن
+    public function operationDashboard(): JsonResponse
+    {
+        $employeeIds = collect()
+            ->merge(Lead::whereNotNull('operation_employee_id')->pluck('operation_employee_id'))
+            ->merge(Owner::whereNotNull('sales_employee_owners_id')->pluck('sales_employee_owners_id'))
+            ->merge(\App\Models\OperationPropertyTypeAssignment::pluck('employee_id'))
+            ->unique()
+            ->values();
+
+        $employees = Employee::whereIn('id', $employeeIds)
+            ->with('operationPropertyTypeAssignments.propertyType:id,name')
+            ->get(['id', 'full_name']);
+
+        $data = $employees->map(function (Employee $employee) {
+            return [
+                'employee_id'         => $employee->id,
+                'full_name'           => $employee->full_name,
+                'property_types'      => $employee->operationPropertyTypeAssignments
+                    ->pluck('propertyType.name')->filter()->values(),
+                'active_leads_count'  => Lead::where('operation_employee_id', $employee->id)
+                    ->where('request_status', 'مفتوح')->count(),
+                'active_owners_count' => Owner::where('sales_employee_owners_id', $employee->id)->count(),
+            ];
+        })->values();
+
+        return $this->success($data);
     }
 }

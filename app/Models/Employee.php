@@ -137,6 +137,11 @@ class Employee extends Authenticatable
         return $this->hasMany(Visit::class, 'assigned_employee_id');
     }
 
+    public function operationPropertyTypeAssignments(): HasMany
+    {
+        return $this->hasMany(OperationPropertyTypeAssignment::class);
+    }
+
     // ============================================================
     // Relations — Permissions
     // ============================================================

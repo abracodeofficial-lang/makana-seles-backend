@@ -9,6 +9,7 @@ class PropertyType extends Model
 
     public function properties(): HasMany { return $this->hasMany(Property::class); }
     public function leads(): HasMany      { return $this->hasMany(Lead::class); }
+    public function operationAssignments(): HasMany { return $this->hasMany(OperationPropertyTypeAssignment::class); }
 
     public function scopeActive($q) { return $q->where('is_active', true); }
 }

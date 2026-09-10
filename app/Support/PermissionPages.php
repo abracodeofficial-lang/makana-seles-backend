@@ -20,6 +20,7 @@ class PermissionPages
             'settings'       => 'الإعدادات',
             'notifications'  => 'الإشعارات',
             'roles'          => 'الأدوار والصلاحيات',
+            'finance'        => 'المالية',
         ];
     }
 }

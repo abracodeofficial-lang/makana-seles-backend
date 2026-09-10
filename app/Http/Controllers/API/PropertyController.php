@@ -32,6 +32,9 @@ class PropertyController extends BaseController
         if ($request->owner_id)          $query->where('owner_id', $request->owner_id);
         if ($request->is_verified !== null) $query->where('is_verified', $request->boolean('is_verified'));
         if ($request->marketing_type_id) $query->where('marketing_type_id', $request->marketing_type_id);
+        if ($request->owner_name)        $query->whereHas('owner', fn($o) => $o->where('name', 'like', "%{$request->owner_name}%"));
+        if ($request->date_from)         $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->date_to)           $query->whereDate('created_at', '<=', $request->date_to);
 
         // إحصائيات
         $stats = [

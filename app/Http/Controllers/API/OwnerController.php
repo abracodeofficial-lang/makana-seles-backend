@@ -26,6 +26,8 @@ class OwnerController extends BaseController
         if ($request->group)            $query->where('group', $request->group);
         if ($request->exclusive_status) $query->where('exclusive_status', $request->exclusive_status);
         if ($request->city_id)          $query->where('city_id', $request->city_id);
+        if ($request->date_from)        $query->whereDate('created_at', '>=', $request->date_from);
+        if ($request->date_to)          $query->whereDate('created_at', '<=', $request->date_to);
 
         // إحصائيات أعلى الصفحة
         $stats = [

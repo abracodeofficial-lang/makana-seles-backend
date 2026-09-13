@@ -22,7 +22,7 @@ class WelcomeEmployeeMail extends Mailable
             ->with([
                 'fullName' => $this->employee->full_name,
                 'email'    => $this->employee->email,
-                'loginUrl' => config('app.frontend_url', 'https://lightpink-pigeon-633801.hostingersite.com'),
+                'loginUrl' => config('app.frontend_url', 'https://system.makanasa.com'),
             ]);
     }
 }

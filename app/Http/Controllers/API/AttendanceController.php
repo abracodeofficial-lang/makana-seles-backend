@@ -12,31 +12,49 @@ class AttendanceController extends BaseController
 {
     public function index(Request $request): JsonResponse
     {
-        $date  = $request->date ?? today()->toDateString();
-        $query = Attendance::with(['employee:id,full_name,employee_number,department_id'])
-            ->whereDate('date', $date);
+        $dateFrom = $request->date_from ?? $request->date ?? today()->toDateString();
+        $dateTo   = $request->date_to   ?? $request->date ?? today()->toDateString();
 
-        if ($request->search) $query->whereHas('employee', fn($q) =>
-            $q->where('full_name', 'like', "%{$request->search}%")
-        );
+        // فلاتر مشتركة (البحث بالاسم، القسم، الشيفت) — بتنطبق على البيانات والإحصائيات وسجلات التحديث التلقائي
+        $applyFilters = function ($q) use ($request) {
+            if ($request->search) $q->whereHas('employee', fn($e) =>
+                $e->where('full_name', 'like', "%{$request->search}%")
+            );
+            if ($request->department_id) $q->whereHas('employee', fn($e) =>
+                $e->where('department_id', $request->department_id)
+            );
+            if ($request->shift_id) $q->whereHas('employee', fn($e) =>
+                $e->where('shift_id', $request->shift_id)
+            );
+            return $q;
+        };
+
+        $baseQuery = fn() => $applyFilters(Attendance::whereBetween('date', [$dateFrom, $dateTo]));
 
         $stats = [
-            'present'  => Attendance::whereDate('date', $date)->where('status', 'حاضر')->count(),
-            'late'     => Attendance::whereDate('date', $date)->where('status', 'متأخر')->count(),
-            'absent'   => Attendance::whereDate('date', $date)->where('status', 'غياب')->count(),
-            'on_leave' => Attendance::whereDate('date', $date)->where('status', 'إجازة')->count(),
+            'present'  => $baseQuery()->where('status', 'حاضر')->count(),
+            'late'     => $baseQuery()->where('status', 'متأخر')->count(),
+            'absent'   => $baseQuery()->where('status', 'غياب')->count(),
+            'on_leave' => $baseQuery()->where('status', 'إجازة')->count(),
         ];
 
-        $autoUpdated = Attendance::with('employee:id,full_name')
-            ->whereDate('date', $date)
+        $query = $baseQuery()->with([
+            'employee:id,full_name,employee_number,department_id,shift_id',
+            'employee.department:id,name',
+            'employee.shift:id,name',
+        ]);
+        if ($request->status) $query->where('status', $request->status);
+
+        $autoUpdated = $baseQuery()->with('employee:id,full_name')
             ->where('source', 'تلقائي')
             ->get();
 
         return response()->json([
             'status'       => true,
-            'date'         => $date,
+            'date_from'    => $dateFrom,
+            'date_to'      => $dateTo,
             'stats'        => $stats,
-            'data'         => $query->get(),
+            'data'         => $query->orderByDesc('date')->get(),
             'auto_updated' => $autoUpdated,
         ]);
     }

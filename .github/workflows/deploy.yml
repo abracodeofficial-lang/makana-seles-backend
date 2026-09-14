@@ -41,6 +41,6 @@ jobs:
             cd ${{ secrets.BACKEND_PATH }}
             composer install --no-dev --optimize-autoloader
             composer dump-autoload --no-dev --optimize
-            php artisan migrate --force
             php artisan config:clear
             php artisan cache:clear
+            php artisan migrate --force

@@ -16,7 +16,7 @@ class Attendance extends Model
         'employee_id', 'date', 'check_in', 'check_out', 'worked_hours',
         'status', 'late_minutes', 'break_start', 'break_end',
         'overtime_hours', 'late_deduction', 'early_leave_deduction',
-        'occupancy_allowance', 'notes', 'source', 'is_approved', 'approved_by',
+        'occupancy_allowance', 'notes', 'daily_update', 'source', 'is_approved', 'approved_by',
     ];
 
     protected $casts = [

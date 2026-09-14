@@ -103,6 +103,10 @@ class PunchController extends BaseController
     // ── بصمة الانصراف ───────────────────────────────────────
     public function checkOut(Request $request): JsonResponse
     {
+        $data = $request->validate([
+            'daily_update' => 'required|string',
+        ]);
+
         $employee = auth()->user();
         $today    = $this->clientDate($request);
 
@@ -116,7 +120,10 @@ class PunchController extends BaseController
             return $this->error('تم تسجيل الانصراف مسبقاً اليوم');
         }
 
-        $record->update(['check_out' => $this->clientTime($request)]);
+        $record->update([
+            'check_out'    => $this->clientTime($request),
+            'daily_update' => $data['daily_update'],
+        ]);
 
         return $this->success($record, 'تم تسجيل الانصراف بنجاح');
     }

@@ -29,6 +29,22 @@ jobs:
           target: ${{ secrets.BACKEND_PATH }}
           overwrite: true
 
+      # تشخيص مؤقت — نتحقق هل /home/u653666066/seles هو المسار الصحيح (فيه .env؟)
+      # بدون ما نلمس سر BACKEND_PATH إطلاقاً. رح نحذف هالخطوة بعد ما نتأكد.
+      - name: Diagnostic - probe candidate backend path
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "--- probing /home/u653666066/seles ---"
+            ls -la /home/u653666066/seles 2>&1 | head -20 || echo "path not found"
+            echo "--- .env there? ---"
+            ls -la /home/u653666066/seles/.env 2>&1 || echo ".env not found there"
+            echo "--- END PROBE ---"
+
       - name: Run composer install + migrate + clear caches
         uses: appleboy/ssh-action@v1.0.3
         with:

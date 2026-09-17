@@ -8,10 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('attendance', function (Blueprint $table) {
-            // التحديث اليومي يلي بيكتبه الموظف عند بصمة الانصراف — يشوفه المدير والـHR
-            $table->text('daily_update')->nullable()->after('notes');
-        });
+        if (!Schema::hasColumn('attendance', 'daily_update')) {
+            Schema::table('attendance', function (Blueprint $table) {
+                // التحديث اليومي يلي بيكتبه الموظف عند بصمة الانصراف — يشوفه المدير والـHR
+                $table->text('daily_update')->nullable()->after('notes');
+            });
+        }
     }
 
     public function down(): void

@@ -43,9 +43,4 @@ jobs:
             composer dump-autoload --no-dev --optimize
             php artisan config:clear
             php artisan cache:clear
-
-            echo "--- MIGRATION STATUS (diagnostic, temporary) ---"
-            php artisan migrate:status
-            echo "--- END STATUS ---"
-
             php artisan migrate --force

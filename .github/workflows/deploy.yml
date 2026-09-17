@@ -39,12 +39,24 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.BACKEND_PATH }}
-            # بعض حسابات الاستضافة عندها متغيرات بيئة DB_* قديمة (بقايا إعداد سيرفر سابق)
-            # مضبوطة على مستوى النظام، وهاي بتطغى على قيم .env الصحيحة عند تشغيل أوامر artisan
-            # عبر SSH — لهيك لازم نلغيها هون حتى يقرأ Laravel القيم الصح من .env
             unset DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD
             composer install --no-dev --optimize-autoloader
             composer dump-autoload --no-dev --optimize
             php artisan config:clear
             php artisan cache:clear
+
+            # تشخيص مؤقت — الـ DB لسا بترجع 'forge' رغم .env الصحيح ورغم unset فوق،
+            # يعني الاحتمال الأرجح إن .env نفسه مو مقروء بسياق CLI (صلاحيات/مسار) وLaravel
+            # عم يرجع لقيمة config/database.php الافتراضية المدمجة بالكود (forge/forge).
+            # هاد القسم ما بيطبع كلمة السر أو أي سر — بس بيتحقق من قابلية القراءة والصلاحيات.
+            echo "--- DIAGNOSTICS ---"
+            whoami
+            pwd
+            ls -la .env
+            wc -l .env
+            grep -c DB_DATABASE .env || true
+            php artisan config:show database.connections.mysql.host 2>&1 || true
+            php artisan config:show database.connections.mysql.database 2>&1 || true
+            echo "--- END DIAGNOSTICS ---"
+
             php artisan migrate --force

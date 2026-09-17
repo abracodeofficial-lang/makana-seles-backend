@@ -29,25 +29,6 @@ jobs:
           target: ${{ secrets.BACKEND_PATH }}
           overwrite: true
 
-      # تشخيص مؤقت — نتحقق هل /home/u653666066/seles هو المسار الصحيح (فيه .env؟)
-      # بدون ما نلمس سر BACKEND_PATH إطلاقاً. رح نحذف هالخطوة بعد ما نتأكد.
-      - name: Diagnostic - probe candidate backend path
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          port: ${{ secrets.SSH_PORT }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            echo "--- ssh landing directory ---"
-            pwd
-            ls -la
-            echo "--- searching for a 'seles' folder from home (depth 6) ---"
-            find ~ -maxdepth 6 -type d -iname "seles" 2>/dev/null
-            echo "--- searching for any 'artisan' file from home (depth 6) ---"
-            find ~ -maxdepth 6 -type f -iname "artisan" 2>/dev/null
-            echo "--- END PROBE ---"
-
       - name: Run composer install + migrate + clear caches
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -58,24 +39,8 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.BACKEND_PATH }}
-            unset DB_CONNECTION DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD
             composer install --no-dev --optimize-autoloader
             composer dump-autoload --no-dev --optimize
             php artisan config:clear
             php artisan cache:clear
-
-            # تشخيص مؤقت — الـ DB لسا بترجع 'forge' رغم .env الصحيح ورغم unset فوق،
-            # يعني الاحتمال الأرجح إن .env نفسه مو مقروء بسياق CLI (صلاحيات/مسار) وLaravel
-            # عم يرجع لقيمة config/database.php الافتراضية المدمجة بالكود (forge/forge).
-            # هاد القسم ما بيطبع كلمة السر أو أي سر — بس بيتحقق من قابلية القراءة والصلاحيات.
-            echo "--- DIAGNOSTICS ---"
-            whoami
-            pwd
-            ls -la .env
-            wc -l .env
-            grep -c DB_DATABASE .env || true
-            php artisan config:show database.connections.mysql.host 2>&1 || true
-            php artisan config:show database.connections.mysql.database 2>&1 || true
-            echo "--- END DIAGNOSTICS ---"
-
             php artisan migrate --force

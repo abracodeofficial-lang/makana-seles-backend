@@ -39,10 +39,13 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "--- probing /home/u653666066/seles ---"
-            ls -la /home/u653666066/seles 2>&1 | head -20 || echo "path not found"
-            echo "--- .env there? ---"
-            ls -la /home/u653666066/seles/.env 2>&1 || echo ".env not found there"
+            echo "--- ssh landing directory ---"
+            pwd
+            ls -la
+            echo "--- searching for a 'seles' folder from home (depth 6) ---"
+            find ~ -maxdepth 6 -type d -iname "seles" 2>/dev/null
+            echo "--- searching for any 'artisan' file from home (depth 6) ---"
+            find ~ -maxdepth 6 -type f -iname "artisan" 2>/dev/null
             echo "--- END PROBE ---"
 
       - name: Run composer install + migrate + clear caches

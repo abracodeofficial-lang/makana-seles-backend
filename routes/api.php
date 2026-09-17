@@ -66,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('owners')->group(function () {
         Route::get('/',                [OwnerController::class, 'index']);
         Route::post('/',               [OwnerController::class, 'store']);
+        Route::get('export',           [OwnerController::class, 'export']);
         Route::get('{id}',             [OwnerController::class, 'show']);
         Route::put('{id}',             [OwnerController::class, 'update']);
         Route::delete('{id}',          [OwnerController::class, 'destroy']);
@@ -76,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('properties')->group(function () {
         Route::get('/',                             [PropertyController::class, 'index']);
         Route::post('/',                            [PropertyController::class, 'store']);
+        Route::get('export',                        [PropertyController::class, 'export']);
         Route::get('{id}',                          [PropertyController::class, 'show']);
         Route::put('{id}',                          [PropertyController::class, 'update']);
         Route::delete('{id}',                       [PropertyController::class, 'destroy']);
@@ -88,6 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/',                        [LeadController::class, 'index']);
         Route::post('/',                       [LeadController::class, 'store']);
         Route::get('operation-dashboard',      [LeadController::class, 'operationDashboard']);
+        Route::get('export',                   [LeadController::class, 'export']);
         Route::get('{id}',                     [LeadController::class, 'show']);
         Route::put('{id}',                     [LeadController::class, 'update']);
         Route::delete('{id}',                  [LeadController::class, 'destroy']);

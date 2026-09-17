@@ -8,16 +8,8 @@ use Illuminate\Http\Request;
 
 class LeadController extends BaseController
 {
-    public function index(Request $request): JsonResponse
+    private function applyFilters($query, Request $request)
     {
-        $query = Lead::with([
-            'propertyType:id,name',
-            'city:id,name',
-            'operationEmployee:id,full_name',
-            'brokerEmployee:id,full_name',
-            'createdBy:id,full_name',
-        ]);
-
         if ($request->search)        $query->where(function($q) use ($request) {
             $q->where('name','like',"%{$request->search}%")
               ->orWhere('phone','like',"%{$request->search}%")
@@ -32,6 +24,7 @@ class LeadController extends BaseController
         if ($request->operation_status)  $query->where('operation_status', $request->operation_status);
         if ($request->specialist_stage)  $query->where('specialist_stage', $request->specialist_stage);
         if ($request->name)              $query->where('name', 'like', "%{$request->name}%");
+        if ($request->phone)             $query->where('phone', 'like', "%{$request->phone}%");
         if ($request->budget_min)        $query->where('budget', '>=', $request->budget_min);
         if ($request->budget_max)        $query->where('budget', '<=', $request->budget_max);
         if ($request->date_from)         $query->whereDate('created_at', '>=', $request->date_from);
@@ -40,6 +33,22 @@ class LeadController extends BaseController
         if ($request->follow_up_from)    $query->whereDate('follow_up_date', '>=', $request->follow_up_from);
         if ($request->follow_up_to)      $query->whereDate('follow_up_date', '<=', $request->follow_up_to);
         if ($request->source)            $query->where('source', $request->source);
+        if ($request->applicant_type)    $query->where('applicant_type', $request->applicant_type);
+        if ($request->direction)         $query->where('direction', $request->direction);
+        if ($request->price_category)    $query->where('price_category', $request->price_category);
+
+        return $query;
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        $query = $this->applyFilters(Lead::with([
+            'propertyType:id,name',
+            'city:id,name',
+            'operationEmployee:id,full_name',
+            'brokerEmployee:id,full_name',
+            'createdBy:id,full_name',
+        ]), $request);
 
         $stats = [
             'total'        => Lead::count(),
@@ -48,7 +57,52 @@ class LeadController extends BaseController
             'inquiries'    => Lead::where('update_status','استفسار')->count(),
         ];
 
-        return response()->json(['status'=>true,'stats'=>$stats,'data'=>$query->latest()->paginate(15)->toArray()]);
+        $groupCount = fn($column) => Lead::selectRaw("$column as label, count(*) as count")
+            ->whereNotNull($column)->groupBy($column)->get()->values();
+
+        $byBudget    = $groupCount('price_category');
+        $byDirection = $groupCount('direction');
+        $byStatus    = $groupCount('request_status');
+
+        $byType = Lead::selectRaw('property_type_id, count(*) as count')
+            ->whereNotNull('property_type_id')->groupBy('property_type_id')
+            ->with('propertyType:id,name')->get()
+            ->map(fn($r) => ['label' => $r->propertyType?->name ?? '—', 'count' => $r->count])->values();
+
+        $byOperation = Lead::selectRaw('operation_employee_id, count(*) as count')
+            ->whereNotNull('operation_employee_id')->groupBy('operation_employee_id')
+            ->with('operationEmployee:id,full_name')->get()
+            ->map(fn($r) => ['label' => $r->operationEmployee?->full_name ?? '—', 'count' => $r->count])->values();
+
+        $bySpecialist = Lead::selectRaw('broker_employee_id, count(*) as count')
+            ->whereNotNull('broker_employee_id')->groupBy('broker_employee_id')
+            ->with('brokerEmployee:id,full_name')->get()
+            ->map(fn($r) => ['label' => $r->brokerEmployee?->full_name ?? '—', 'count' => $r->count])->values();
+
+        return response()->json([
+            'status'        => true,
+            'stats'         => $stats,
+            'by_budget'     => $byBudget,
+            'by_direction'  => $byDirection,
+            'by_status'     => $byStatus,
+            'by_type'       => $byType,
+            'by_operation'  => $byOperation,
+            'by_specialist' => $bySpecialist,
+            'data'          => $query->latest()->paginate(15)->toArray(),
+        ]);
+    }
+
+    // GET /api/leads/export — كل السجلات المطابقة للفلاتر، بدون تقسيم صفحات
+    public function export(Request $request): JsonResponse
+    {
+        $records = $this->applyFilters(Lead::with([
+            'propertyType:id,name',
+            'city:id,name',
+            'operationEmployee:id,full_name',
+            'brokerEmployee:id,full_name',
+        ]), $request)->latest()->get();
+
+        return $this->success($records);
     }
 
     public function show(int $id): JsonResponse
@@ -70,6 +124,7 @@ class LeadController extends BaseController
             'applicant_type'        => 'required|in:مهتم,مشتري,مستأجر,وسيط,وكيل,مطور',
             'source'                => 'required|string',
             'property_type_id'      => 'nullable|exists:property_types,id',
+            'direction'             => 'nullable|in:شمالية,جنوبية,شرقية,غربية,شمالية شرقية,شمالية غربية,جنوبية شرقية,جنوبية غربية',
             'city_id'               => 'nullable|exists:cities,id',
             'neighborhood_id'       => 'nullable|exists:neighborhoods,id',
             'offered_price'         => 'nullable|numeric',

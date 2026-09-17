@@ -13,7 +13,7 @@ class Lead extends Model
     protected $fillable = [
         'lead_code', 'name', 'phone',
         'applicant_type', 'source',
-        'property_type_id', 'city_id', 'neighborhood_id',
+        'property_type_id', 'direction', 'city_id', 'neighborhood_id',
         'offered_price', 'budget', 'price_category', 'is_available',
         'classification', 'seriousness_level', 'purchase_goal', 'payment_method_id',
         'operation_employee_id', 'broker_employee_id', 'created_by',

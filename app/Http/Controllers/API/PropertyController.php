@@ -9,17 +9,8 @@ use Illuminate\Support\Facades\Storage;
 
 class PropertyController extends BaseController
 {
-    // GET /api/properties
-    public function index(Request $request): JsonResponse
+    private function applyFilters($query, Request $request)
     {
-        $query = Property::with([
-            'owner:id,name,owner_code,phone,whatsapp',
-            'propertyType:id,name',
-            'city:id,name',
-            'neighborhood:id,name',
-        ]);
-
-        // فلترة
         if ($request->search)       $query->where(function($q) use ($request) {
             $q->where('name', 'like', "%{$request->search}%")
               ->orWhere('property_code', 'like', "%{$request->search}%")
@@ -35,6 +26,23 @@ class PropertyController extends BaseController
         if ($request->owner_name)        $query->whereHas('owner', fn($o) => $o->where('name', 'like', "%{$request->owner_name}%"));
         if ($request->date_from)         $query->whereDate('created_at', '>=', $request->date_from);
         if ($request->date_to)           $query->whereDate('created_at', '<=', $request->date_to);
+        if ($request->direction)         $query->where('direction', $request->direction);
+        if ($request->price_min)         $query->where('listed_price', '>=', $request->price_min);
+        if ($request->price_max)         $query->where('listed_price', '<=', $request->price_max);
+        if ($request->code)              $query->where('property_code', 'like', "%{$request->code}%");
+
+        return $query;
+    }
+
+    // GET /api/properties
+    public function index(Request $request): JsonResponse
+    {
+        $query = $this->applyFilters(Property::with([
+            'owner:id,name,owner_code,phone,whatsapp',
+            'propertyType:id,name',
+            'city:id,name',
+            'neighborhood:id,name',
+        ]), $request);
 
         // إحصائيات
         $stats = [
@@ -43,13 +51,44 @@ class PropertyController extends BaseController
             'reserved'        => Property::where('status', 'محجوز')->count(),
             'sold'            => Property::where('status', 'مباع')->count(),
             'under_review'    => Property::where('status', 'قيد المراجعة')->count(),
+            'marketing'       => Property::where('marketing_status', 'جاري')->count(),
         ];
 
+        $byType = Property::selectRaw('property_type_id, count(*) as count')
+            ->whereNotNull('property_type_id')
+            ->groupBy('property_type_id')
+            ->with('propertyType:id,name')
+            ->get()
+            ->map(fn($r) => ['label' => $r->propertyType?->name ?? '—', 'count' => $r->count])
+            ->values();
+
+        $byDirection = Property::selectRaw('direction, count(*) as count')
+            ->whereNotNull('direction')
+            ->groupBy('direction')
+            ->get()
+            ->map(fn($r) => ['label' => $r->direction, 'count' => $r->count])
+            ->values();
+
         return response()->json([
-            'status' => true,
-            'stats'  => $stats,
-            'data'   => $query->latest()->paginate(12)->toArray(),
+            'status'       => true,
+            'stats'        => $stats,
+            'by_type'      => $byType,
+            'by_direction' => $byDirection,
+            'data'         => $query->latest()->paginate(12)->toArray(),
         ]);
+    }
+
+    // GET /api/properties/export — كل السجلات المطابقة للفلاتر، بدون تقسيم صفحات
+    public function export(Request $request): JsonResponse
+    {
+        $records = $this->applyFilters(Property::with([
+            'owner:id,name,owner_code',
+            'propertyType:id,name',
+            'city:id,name',
+            'neighborhood:id,name',
+        ]), $request)->latest()->get();
+
+        return $this->success($records);
     }
 
     // GET /api/properties/{id}

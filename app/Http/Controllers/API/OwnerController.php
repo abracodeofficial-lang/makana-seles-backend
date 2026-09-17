@@ -2,19 +2,14 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Models\{Owner, NotificationLog};
+use App\Models\{Owner, Property, NotificationLog};
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class OwnerController extends BaseController
 {
-    // GET /api/owners
-    public function index(Request $request): JsonResponse
+    private function applyFilters($query, Request $request)
     {
-        $query = Owner::with(['city', 'salesEmployeeOwners:id,full_name', 'salesEmployeeLeads:id,full_name'])
-            ->withCount('properties');
-
-        // فلترة
         if ($request->search) {
             $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
@@ -31,21 +26,69 @@ class OwnerController extends BaseController
         if ($request->name)             $query->where('name', 'like', "%{$request->name}%");
         if ($request->price_update_from) $query->whereDate('price_update_date', '>=', $request->price_update_from);
         if ($request->price_update_to)   $query->whereDate('price_update_date', '<=', $request->price_update_to);
+        if ($request->sales_employee_owners_id) $query->where('sales_employee_owners_id', $request->sales_employee_owners_id);
+        if ($request->property_type_id) $query->whereHas('properties', fn($p) => $p->where('property_type_id', $request->property_type_id));
+        if ($request->direction)        $query->whereHas('properties', fn($p) => $p->where('direction', $request->direction));
+        if ($request->price_min)        $query->whereHas('properties', fn($p) => $p->where('listed_price', '>=', $request->price_min));
+        if ($request->price_max)        $query->whereHas('properties', fn($p) => $p->where('listed_price', '<=', $request->price_max));
+
+        return $query;
+    }
+
+    // GET /api/owners
+    public function index(Request $request): JsonResponse
+    {
+        $query = $this->applyFilters(
+            Owner::with(['city', 'salesEmployeeOwners:id,full_name', 'salesEmployeeLeads:id,full_name'])
+                ->withCount('properties'),
+            $request
+        );
 
         // إحصائيات أعلى الصفحة
         $stats = [
-            'total'      => Owner::count(),
-            'individuals'=> Owner::where('type', 'مالك')->count(),
-            'developers' => Owner::where('type', 'مطور')->count(),
-            'offices'    => Owner::where('type', 'مكتب')->count(),
-            'projects'   => Owner::where('type', 'مشروع')->count(),
+            'total'               => Owner::count(),
+            'individuals'         => Owner::where('type', 'مالك')->count(),
+            'developers'          => Owner::where('type', 'مطور')->count(),
+            'offices'             => Owner::where('type', 'مكتب')->count(),
+            'projects'            => Owner::where('type', 'مشروع')->count(),
+            'properties_added'    => Property::count(),
+            'properties_accepted' => Property::where('status', 'متاح')->count(),
+            'properties_verified' => Property::where('is_verified', true)->count(),
+            'avg_price'           => round((float) Property::avg('listed_price'), 2),
         ];
 
+        $byOwnerType = Owner::selectRaw('type, count(*) as count')
+            ->groupBy('type')->get()
+            ->map(fn($r) => ['label' => $r->type, 'count' => $r->count])->values();
+
+        $byPropertyType = Property::selectRaw('property_type_id, count(*) as count')
+            ->whereNotNull('property_type_id')->groupBy('property_type_id')
+            ->with('propertyType:id,name')->get()
+            ->map(fn($r) => ['label' => $r->propertyType?->name ?? '—', 'count' => $r->count])->values();
+
+        $byDirection = Property::selectRaw('direction, count(*) as count')
+            ->whereNotNull('direction')->groupBy('direction')->get()
+            ->map(fn($r) => ['label' => $r->direction, 'count' => $r->count])->values();
+
         return response()->json([
-            'status' => true,
-            'stats'  => $stats,
-            'data'   => $query->latest()->paginate(15)->toArray(),
+            'status'            => true,
+            'stats'             => $stats,
+            'by_owner_type'     => $byOwnerType,
+            'by_property_type'  => $byPropertyType,
+            'by_direction'      => $byDirection,
+            'data'              => $query->latest()->paginate(15)->toArray(),
         ]);
+    }
+
+    // GET /api/owners/export — كل السجلات المطابقة للفلاتر، بدون تقسيم صفحات
+    public function export(Request $request): JsonResponse
+    {
+        $records = $this->applyFilters(
+            Owner::with(['city', 'salesEmployeeOwners:id,full_name'])->withCount('properties'),
+            $request
+        )->latest()->get();
+
+        return $this->success($records);
     }
 
     // GET /api/owners/{id}

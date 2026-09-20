@@ -45,17 +45,19 @@ class PropertyController extends BaseController
             'neighborhood:id,name',
         ]), $request);
 
-        // إحصائيات
+        // إحصائيات — بتتبع نفس الفلاتر المطبّقة على الجدول
+        $base = fn() => $this->applyFilters(Property::query(), $request);
+
         $stats = [
-            'total'           => Property::count(),
-            'available'       => Property::where('status', 'متاح')->count(),
-            'reserved'        => Property::where('status', 'محجوز')->count(),
-            'sold'            => Property::where('status', 'مباع')->count(),
-            'under_review'    => Property::where('status', 'قيد المراجعة')->count(),
-            'marketing'       => Property::where('marketing_status', 'جاري')->count(),
+            'total'           => $base()->count(),
+            'available'       => $base()->where('status', 'متاح')->count(),
+            'reserved'        => $base()->where('status', 'محجوز')->count(),
+            'sold'            => $base()->where('status', 'مباع')->count(),
+            'under_review'    => $base()->where('status', 'قيد المراجعة')->count(),
+            'marketing'       => $base()->where('marketing_status', 'جاري')->count(),
         ];
 
-        $byType = Property::selectRaw('property_type_id, count(*) as count')
+        $byType = $base()->selectRaw('property_type_id, count(*) as count')
             ->whereNotNull('property_type_id')
             ->groupBy('property_type_id')
             ->with('propertyType:id,name')
@@ -63,7 +65,7 @@ class PropertyController extends BaseController
             ->map(fn($r) => ['label' => $r->propertyType?->name ?? '—', 'count' => $r->count])
             ->values();
 
-        $byDirection = Property::selectRaw('direction, count(*) as count')
+        $byDirection = $base()->selectRaw('direction, count(*) as count')
             ->whereNotNull('direction')
             ->groupBy('direction')
             ->get()

@@ -50,31 +50,35 @@ class LeadController extends BaseController
             'createdBy:id,full_name',
         ]), $request);
 
+        // إحصائيات وتوزيعات — بتتبع نفس الفلاتر المطبّقة على الجدول
+        $base = fn() => $this->applyFilters(Lead::query(), $request);
+
         $stats = [
-            'total'        => Lead::count(),
-            'serious'      => Lead::where('classification','جاد')->count(),
-            'today_visits' => \App\Models\Visit::whereDate('visit_date', today())->count(),
-            'inquiries'    => Lead::where('update_status','استفسار')->count(),
+            'total'        => $base()->count(),
+            'serious'      => $base()->where('classification','جاد')->count(),
+            'today_visits' => \App\Models\Visit::whereDate('visit_date', today())
+                                ->whereIn('lead_id', $base()->select('leads.id'))->count(),
+            'inquiries'    => $base()->where('update_status','استفسار')->count(),
         ];
 
-        $groupCount = fn($column) => Lead::selectRaw("$column as label, count(*) as count")
+        $groupCount = fn($column) => $base()->selectRaw("$column as label, count(*) as count")
             ->whereNotNull($column)->groupBy($column)->get()->values();
 
         $byBudget    = $groupCount('price_category');
         $byDirection = $groupCount('direction');
         $byStatus    = $groupCount('request_status');
 
-        $byType = Lead::selectRaw('property_type_id, count(*) as count')
+        $byType = $base()->selectRaw('property_type_id, count(*) as count')
             ->whereNotNull('property_type_id')->groupBy('property_type_id')
             ->with('propertyType:id,name')->get()
             ->map(fn($r) => ['label' => $r->propertyType?->name ?? '—', 'count' => $r->count])->values();
 
-        $byOperation = Lead::selectRaw('operation_employee_id, count(*) as count')
+        $byOperation = $base()->selectRaw('operation_employee_id, count(*) as count')
             ->whereNotNull('operation_employee_id')->groupBy('operation_employee_id')
             ->with('operationEmployee:id,full_name')->get()
             ->map(fn($r) => ['label' => $r->operationEmployee?->full_name ?? '—', 'count' => $r->count])->values();
 
-        $bySpecialist = Lead::selectRaw('broker_employee_id, count(*) as count')
+        $bySpecialist = $base()->selectRaw('broker_employee_id, count(*) as count')
             ->whereNotNull('broker_employee_id')->groupBy('broker_employee_id')
             ->with('brokerEmployee:id,full_name')->get()
             ->map(fn($r) => ['label' => $r->brokerEmployee?->full_name ?? '—', 'count' => $r->count])->values();

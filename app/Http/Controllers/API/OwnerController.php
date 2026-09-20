@@ -44,29 +44,32 @@ class OwnerController extends BaseController
             $request
         );
 
-        // إحصائيات أعلى الصفحة
+        // إحصائيات أعلى الصفحة — بتتبع نفس الفلاتر المطبّقة على الجدول
+        $ownersBase = fn() => $this->applyFilters(Owner::query(), $request);
+        $propsBase  = fn() => Property::whereIn('owner_id', $ownersBase()->select('owners.id'));
+
         $stats = [
-            'total'               => Owner::count(),
-            'individuals'         => Owner::where('type', 'مالك')->count(),
-            'developers'          => Owner::where('type', 'مطور')->count(),
-            'offices'             => Owner::where('type', 'مكتب')->count(),
-            'projects'            => Owner::where('type', 'مشروع')->count(),
-            'properties_added'    => Property::count(),
-            'properties_accepted' => Property::where('status', 'متاح')->count(),
-            'properties_verified' => Property::where('is_verified', true)->count(),
-            'avg_price'           => round((float) Property::avg('listed_price'), 2),
+            'total'               => $ownersBase()->count(),
+            'individuals'         => $ownersBase()->where('type', 'مالك')->count(),
+            'developers'          => $ownersBase()->where('type', 'مطور')->count(),
+            'offices'             => $ownersBase()->where('type', 'مكتب')->count(),
+            'projects'            => $ownersBase()->where('type', 'مشروع')->count(),
+            'properties_added'    => $propsBase()->count(),
+            'properties_accepted' => $propsBase()->where('status', 'متاح')->count(),
+            'properties_verified' => $propsBase()->where('is_verified', true)->count(),
+            'avg_price'           => round((float) $propsBase()->avg('listed_price'), 2),
         ];
 
-        $byOwnerType = Owner::selectRaw('type, count(*) as count')
+        $byOwnerType = $ownersBase()->selectRaw('type, count(*) as count')
             ->groupBy('type')->get()
             ->map(fn($r) => ['label' => $r->type, 'count' => $r->count])->values();
 
-        $byPropertyType = Property::selectRaw('property_type_id, count(*) as count')
+        $byPropertyType = $propsBase()->selectRaw('property_type_id, count(*) as count')
             ->whereNotNull('property_type_id')->groupBy('property_type_id')
             ->with('propertyType:id,name')->get()
             ->map(fn($r) => ['label' => $r->propertyType?->name ?? '—', 'count' => $r->count])->values();
 
-        $byDirection = Property::selectRaw('direction, count(*) as count')
+        $byDirection = $propsBase()->selectRaw('direction, count(*) as count')
             ->whereNotNull('direction')->groupBy('direction')->get()
             ->map(fn($r) => ['label' => $r->direction, 'count' => $r->count])->values();
 

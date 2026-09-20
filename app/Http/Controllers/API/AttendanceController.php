@@ -14,9 +14,12 @@ class AttendanceController extends BaseController
     {
         $dateFrom = $request->date_from ?? $request->date ?? today()->toDateString();
         $dateTo   = $request->date_to   ?? $request->date ?? today()->toDateString();
+        if ($dateFrom > $dateTo) [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
 
-        // فلاتر مشتركة (البحث بالاسم، القسم، الشيفت) — بتنطبق على البيانات والإحصائيات وسجلات التحديث التلقائي
+        // فلاتر مشتركة (الموظف، القسم، الشيفت، الحالة) — بتنطبق على البيانات والعدادات وسجلات التحديث التلقائي
         $applyFilters = function ($q) use ($request) {
+            if ($request->employee_id) $q->where('employee_id', $request->employee_id);
+            if ($request->status)      $q->where('status', $request->status);
             if ($request->search) $q->whereHas('employee', fn($e) =>
                 $e->where('full_name', 'like', "%{$request->search}%")
             );
@@ -43,7 +46,6 @@ class AttendanceController extends BaseController
             'employee.department:id,name',
             'employee.shift:id,name',
         ]);
-        if ($request->status) $query->where('status', $request->status);
 
         $autoUpdated = $baseQuery()->with('employee:id,full_name')
             ->where('source', 'تلقائي')

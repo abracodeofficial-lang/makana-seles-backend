@@ -16,6 +16,7 @@ class PropertyController extends BaseController
               ->orWhere('property_code', 'like', "%{$request->search}%")
               ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$request->search}%"));
         });
+        if ($request->property_id)       $query->where('id', $request->property_id);
         if ($request->status)            $query->where('status', $request->status);
         if ($request->property_type_id)  $query->where('property_type_id', $request->property_type_id);
         if ($request->city_id)           $query->where('city_id', $request->city_id);

@@ -35,6 +35,7 @@ class LeadController extends BaseController
         if ($request->source)            $query->where('source', $request->source);
         if ($request->applicant_type)    $query->where('applicant_type', $request->applicant_type);
         if ($request->city_id)           $query->where('city_id', $request->city_id);
+        if ($request->neighborhood_id)   $query->where('neighborhood_id', $request->neighborhood_id);
         if ($request->direction)         $query->where('direction', $request->direction);
         if ($request->price_category)    $query->where('price_category', $request->price_category);
 

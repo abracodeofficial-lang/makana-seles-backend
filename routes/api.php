@@ -143,6 +143,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/',             [AttendanceController::class, 'index']);
         Route::post('/',            [AttendanceController::class, 'store']);
         Route::get('export',        [AttendanceController::class, 'export']);
+        Route::get('online',        [AttendanceController::class, 'online']);
         Route::patch('{id}/approve',[AttendanceController::class, 'approve']);
     });
 

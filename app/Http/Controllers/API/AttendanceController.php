@@ -119,4 +119,29 @@ class AttendanceController extends BaseController
 
         return $this->success($records);
     }
+
+    // GET /api/attendance/online — الموظفون الحاضرون حالياً (بصموا حضور واليوم ولسا ما بصموا انصراف)
+    public function online(): JsonResponse
+    {
+        $records = Attendance::whereDate('date', today())
+            ->whereNotNull('check_in')
+            ->whereNull('check_out')
+            ->with([
+                'employee:id,full_name,job_title,department_id,shift_id',
+                'employee.department:id,name',
+                'employee.shift:id,name,end_time',
+            ])
+            ->get();
+
+        $data = $records->map(fn($r) => [
+            'employee_id' => $r->employee_id,
+            'full_name'   => $r->employee?->full_name,
+            'job_title'   => $r->employee?->job_title,
+            'department'  => $r->employee?->department?->name,
+            'shift_end'   => $r->employee?->shift?->end_time,
+            'check_in'    => $r->check_in,
+        ])->values();
+
+        return $this->success($data);
+    }
 }

@@ -27,6 +27,9 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
 });
 
+// المفتاح العام لإشعارات الجهاز (Web Push) — عام بطبيعته
+Route::get('push/public-key', [\App\Http\Controllers\API\PushController::class, 'publicKey']);
+
 // ============================================================
 // LOOKUP — بيانات القوائم (بدون توثيق)
 // ============================================================
@@ -178,6 +181,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('{id}/reject',  [PermissionRequestController::class, 'reject']);
         Route::patch('{id}/inquire', [PermissionRequestController::class, 'inquire']);
         Route::patch('{id}/clarify', [PermissionRequestController::class, 'clarify']);
+    });
+
+    // إشعارات الجهاز (Web Push)
+    Route::prefix('push')->group(function () {
+        Route::post('subscribe',   [\App\Http\Controllers\API\PushController::class, 'subscribe']);
+        Route::post('unsubscribe', [\App\Http\Controllers\API\PushController::class, 'unsubscribe']);
+        Route::post('test',        [\App\Http\Controllers\API\PushController::class, 'test']);
     });
 
     // الإشعارات

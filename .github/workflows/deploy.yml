@@ -44,3 +44,12 @@ jobs:
             php artisan config:clear
             php artisan cache:clear
             php artisan migrate --force
+
+            # الـ scheduler (تذكيرات الدوام) — منضيف سطر الـ cron مرة وحدة بس لو مش موجود
+            # ما منخلي فشل هالخطوة يوقف النشر؛ لو ما زبطت منضيفه يدوياً من hPanel
+            CRON_LINE="* * * * * cd ${{ secrets.BACKEND_PATH }} && $(command -v php) artisan schedule:run >> /dev/null 2>&1"
+            if crontab -l 2>/dev/null | grep -qF "artisan schedule:run"; then
+              echo "cron already installed"
+            else
+              { crontab -l 2>/dev/null || true; echo "$CRON_LINE"; } | crontab - && echo "cron installed" || echo "WARNING: could not install cron"
+            fi

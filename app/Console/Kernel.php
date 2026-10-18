@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // تذكير قبل بداية الدوام بـ10 دقائق وعند نهايته (يحتاج cron: * * * * * php artisan schedule:run)
+        $schedule->command('attendance:shift-reminders')->everyMinute()->withoutOverlapping(5);
     }
 
     /**

@@ -9,7 +9,16 @@ class AttendanceSetting extends Model
         'late_tolerance_minutes',
         'overtime_multiplier',
         'deduction_after_late_days',
+        'weekend_days',
     ];
+
+    protected $casts = ['weekend_days' => 'array'];
+
+    // الافتراضي: الجمعة والسبت
+    public function weekendDays(): array
+    {
+        return $this->weekend_days ?? [5, 6];
+    }
 
     // دائماً نجيب السجل الوحيد
     public static function current(): self

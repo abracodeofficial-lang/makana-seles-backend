@@ -72,6 +72,9 @@ return [
 
     'timezone' => 'UTC',
 
+    // التوقيت المحلي للشركة — أوقات الشيفتات والبصمات مخزنة فيه (يُستخدم لتذكيرات الدوام)
+    'business_timezone' => env('BUSINESS_TIMEZONE', 'Asia/Riyadh'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

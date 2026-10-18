@@ -7,6 +7,7 @@ use App\Services\WebPushService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 // اشتراك الجهاز بإشعارات Web Push
 class PushController extends BaseController
@@ -17,6 +18,9 @@ class PushController extends BaseController
         return $this->success([
             'public_key'         => WebPushService::keys()['publicKey'],
             'scheduler_last_run' => Cache::get('scheduler:last_run'),
+            'cron_status'        => Storage::disk('local')->exists('webpush/cron-status.txt')
+                ? trim(Storage::disk('local')->get('webpush/cron-status.txt'))
+                : null,
         ]);
     }
 

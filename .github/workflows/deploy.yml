@@ -53,3 +53,7 @@ jobs:
             else
               { crontab -l 2>/dev/null || true; echo "$CRON_LINE"; } | crontab - && echo "cron installed" || echo "WARNING: could not install cron"
             fi
+            # حالة الـ cron بتنعرض بـ /api/push/public-key (للتشخيص بدون دخول للسيرفر)
+            mkdir -p storage/app/webpush
+            { date -u +%FT%TZ; command -v crontab || echo "no-crontab-binary"; crontab -l 2>&1 | grep -c "artisan schedule:run" || true; } > storage/app/webpush/cron-status.txt 2>&1
+            php artisan attendance:shift-reminders || echo "WARNING: shift reminders command failed"

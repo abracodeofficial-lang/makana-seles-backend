@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\WebPushService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -20,6 +21,17 @@ class NotificationLog extends Model
     public function employee(): BelongsTo { return $this->belongsTo(Employee::class); }
 
     public function scopeUnread($q) { return $q->where('is_read', false); }
+
+    // كل إشعار بالنظام بيوصل كمان لأجهزة صاحبه فقط (Web Push).
+    // بعد ما يرجع الرد للمستخدم، حتى ما يبطّئ الطلب (مثلاً إرسال لكل المعتمدين)
+    protected static function booted(): void
+    {
+        static::created(function (NotificationLog $n) {
+            dispatch(fn () => WebPushService::sendToEmployee(
+                $n->employee_id, $n->title, (string) $n->body, $n->url ?: '/notifications', "notif-{$n->id}"
+            ))->afterResponse();
+        });
+    }
 
     // إنشاء إشعار سريع
     public static function send(int $employeeId, string $title, string $body, string $type = 'معلومة', ?string $url = null): self

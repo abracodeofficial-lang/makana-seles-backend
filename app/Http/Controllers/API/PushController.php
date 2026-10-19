@@ -60,7 +60,7 @@ class PushController extends BaseController
         $sent = WebPushService::sendToEmployee(
             $request->user()->id,
             '🔔 الإشعارات شغالة',
-            'هيك رح توصلك تذكيرات بداية ونهاية الدوام على هذا الجهاز',
+            'هيك رح توصلك كل إشعاراتك وتذكيرات الدوام على هذا الجهاز',
             '/punch',
             'test'
         );

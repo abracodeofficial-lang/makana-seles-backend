@@ -72,7 +72,6 @@ class SendShiftReminders extends Command
         $body  = 'يبدأ دوامك الساعة ' . substr($shift->start_time, 0, 5) . ' — لا تنسَ تبصم حضور.';
 
         NotificationLog::send($emp->id, $title, $body, 'تحذير', '/punch');
-        WebPushService::sendToEmployee($emp->id, $title, $body, '/punch', "shift-start-{$date}");
     }
 
     private function maybeRemindEnd(Employee $emp, $shift, Carbon $now, string $tz): void
@@ -96,6 +95,5 @@ class SendShiftReminders extends Command
         $body  = 'انتهى دوامك الساعة ' . substr($shift->end_time, 0, 5) . ' — لا تنسَ تبصم انصراف وتكتب تحديثك اليومي.';
 
         NotificationLog::send($emp->id, $title, $body, 'معلومة', '/punch');
-        WebPushService::sendToEmployee($emp->id, $title, $body, '/punch', "shift-end-{$workDate}");
     }
 }

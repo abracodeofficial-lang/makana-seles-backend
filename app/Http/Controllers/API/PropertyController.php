@@ -14,6 +14,9 @@ class PropertyController extends BaseController
         if ($request->search)       $query->where(function($q) use ($request) {
             $q->where('name', 'like', "%{$request->search}%")
               ->orWhere('property_code', 'like', "%{$request->search}%")
+              ->orWhere('license_number', 'like', "%{$request->search}%")
+              ->orWhere('plan_number', 'like', "%{$request->search}%")
+              ->orWhere('plot_number', 'like', "%{$request->search}%")
               ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$request->search}%"));
         });
         if ($request->property_id)       $query->where('id', $request->property_id);
@@ -29,6 +32,7 @@ class PropertyController extends BaseController
         if ($request->date_to)           $query->whereDate('created_at', '<=', $request->date_to);
         if ($request->direction)         $query->where('direction', $request->direction);
         if ($request->facade)            $query->where('facade', 'like', "%{$request->facade}%");
+        if ($request->filled('has_brokerage_contract')) $query->where('has_brokerage_contract', (bool) $request->has_brokerage_contract);
         if ($request->price_min)         $query->where('listed_price', '>=', $request->price_min);
         if ($request->price_max)         $query->where('listed_price', '<=', $request->price_max);
         if ($request->code)              $query->where('property_code', 'like', "%{$request->code}%");
@@ -136,6 +140,10 @@ class PropertyController extends BaseController
             'building_number'    => 'nullable|string',
             'direction'          => 'nullable|string',
             'facade'             => 'nullable|string|max:100',
+            'has_brokerage_contract' => 'nullable|boolean',
+            'license_number'     => 'nullable|string|max:50',
+            'plan_number'        => 'nullable|string|max:50',
+            'plot_number'        => 'nullable|string|max:50',
             'map_url'            => 'nullable|url',
             'latitude'           => 'nullable|numeric',
             'longitude'          => 'nullable|numeric',

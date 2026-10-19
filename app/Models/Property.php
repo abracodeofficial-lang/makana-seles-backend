@@ -17,6 +17,7 @@ class Property extends Model
         'market_price_note', 'discount_amount',
         'total_area', 'land_area', 'building_area',
         'city_id', 'neighborhood_id', 'street', 'building_number', 'postal_code',
+        'has_brokerage_contract', 'license_number', 'plan_number', 'plot_number',
         'direction', 'facade', 'map_url', 'latitude', 'longitude', 'nearby_places',
         'owner_id', 'advertiser_role', 'mortgage_status', 'mortgage_amount',
         'rental_status', 'annual_income', 'annual_return_rate', 'tenants_count',
@@ -33,6 +34,7 @@ class Property extends Model
 
     protected $casts = [
         'is_verified'      => 'boolean',
+        'has_brokerage_contract' => 'boolean',
         'is_furnished'     => 'boolean',
         'has_pool'         => 'boolean',
         'has_garden'       => 'boolean',

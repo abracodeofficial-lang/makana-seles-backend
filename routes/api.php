@@ -183,6 +183,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('{id}/clarify', [PermissionRequestController::class, 'clarify']);
     });
 
+    // رسائل واتساب جماعية (ملاك / مهتمين)
+    Route::prefix('broadcast')->controller(\App\Http\Controllers\API\BroadcastController::class)->group(function () {
+        Route::get('recipients',                                   'recipients');
+        Route::get('lists',                                        'lists');
+        Route::post('lists',                                       'storeList');
+        Route::put('lists/{list}',                                 'updateList');
+        Route::delete('lists/{list}',                              'destroyList');
+        Route::get('campaigns',                                    'campaigns');
+        Route::post('campaigns',                                   'storeCampaign');
+        Route::get('campaigns/{campaign}',                         'showCampaign');
+        Route::patch('campaigns/{campaign}/recipients/{recipient}', 'updateRecipient');
+        Route::delete('campaigns/{campaign}',                      'destroyCampaign');
+    });
+
     // إشعارات الجهاز (Web Push)
     Route::prefix('push')->group(function () {
         Route::post('subscribe',   [\App\Http\Controllers\API\PushController::class, 'subscribe']);

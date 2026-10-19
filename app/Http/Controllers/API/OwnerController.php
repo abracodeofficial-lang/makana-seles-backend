@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class OwnerController extends BaseController
 {
-    private function applyFilters($query, Request $request)
+    public function applyFilters($query, Request $request)
     {
         if ($request->search) {
             $query->where(function ($q) use ($request) {

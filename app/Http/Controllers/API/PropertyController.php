@@ -28,6 +28,7 @@ class PropertyController extends BaseController
         if ($request->date_from)         $query->whereDate('created_at', '>=', $request->date_from);
         if ($request->date_to)           $query->whereDate('created_at', '<=', $request->date_to);
         if ($request->direction)         $query->where('direction', $request->direction);
+        if ($request->facade)            $query->where('facade', 'like', "%{$request->facade}%");
         if ($request->price_min)         $query->where('listed_price', '>=', $request->price_min);
         if ($request->price_max)         $query->where('listed_price', '<=', $request->price_max);
         if ($request->code)              $query->where('property_code', 'like', "%{$request->code}%");
@@ -134,6 +135,7 @@ class PropertyController extends BaseController
             'street'             => 'nullable|string',
             'building_number'    => 'nullable|string',
             'direction'          => 'nullable|string',
+            'facade'             => 'nullable|string|max:100',
             'map_url'            => 'nullable|url',
             'latitude'           => 'nullable|numeric',
             'longitude'          => 'nullable|numeric',

@@ -17,7 +17,7 @@ class Property extends Model
         'market_price_note', 'discount_amount',
         'total_area', 'land_area', 'building_area',
         'city_id', 'neighborhood_id', 'street', 'building_number', 'postal_code',
-        'direction', 'map_url', 'latitude', 'longitude', 'nearby_places',
+        'direction', 'facade', 'map_url', 'latitude', 'longitude', 'nearby_places',
         'owner_id', 'advertiser_role', 'mortgage_status', 'mortgage_amount',
         'rental_status', 'annual_income', 'annual_return_rate', 'tenants_count',
         'contract_duration', 'contract_type_rental', 'rental_info', 'contract_end_date',

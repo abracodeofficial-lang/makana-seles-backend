@@ -27,6 +27,13 @@ Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
 });
 
+// برنامج ربط الواتساب على كمبيوتر المكتب — بمفتاح الجهاز (X-Gateway-Token) مو بتوكن مستخدم
+Route::prefix('wa-gateway')->middleware('throttle:120,1')->controller(\App\Http\Controllers\API\WaGatewayController::class)->group(function () {
+    Route::post('heartbeat', 'heartbeat');
+    Route::get('next',       'next');
+    Route::post('report',    'report');
+});
+
 // المفتاح العام لإشعارات الجهاز (Web Push) — عام بطبيعته
 Route::get('push/public-key', [\App\Http\Controllers\API\PushController::class, 'publicKey']);
 
@@ -195,6 +202,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('campaigns/{campaign}',                         'showCampaign');
         Route::patch('campaigns/{campaign}/recipients/{recipient}', 'updateRecipient');
         Route::delete('campaigns/{campaign}',                      'destroyCampaign');
+        Route::patch('campaigns/{campaign}/auto',                  'autoSend');
+    });
+    Route::prefix('broadcast/gateway')->controller(\App\Http\Controllers\API\WaGatewayController::class)->group(function () {
+        Route::get('/',         'show');
+        Route::put('settings',  'updateSettings');
+        Route::post('logout',   'logout');
+        Route::post('token',    'regenerateToken');
+        Route::get('download',  'download');
     });
 
     // إشعارات الجهاز (Web Push)

@@ -146,6 +146,7 @@ class BroadcastController extends BaseController
                 'recipients',
                 'recipients as sent_count'    => fn ($q) => $q->where('status', 'sent'),
                 'recipients as skipped_count' => fn ($q) => $q->where('status', 'skipped'),
+                'recipients as failed_count'  => fn ($q) => $q->where('status', 'failed'),
             ])
             ->with('createdBy:id,full_name')
             ->latest()->limit(100)->get();
@@ -209,11 +210,14 @@ class BroadcastController extends BaseController
         $this->authorizeAudience($request, $campaign->audience);
         abort_unless($recipient->wa_campaign_id === $campaign->id, 404);
 
+        abort_if($campaign->auto_status === 'running', 422, 'الحملة شغالة تلقائي — وقّفها أول');
         $data = $request->validate(['status' => 'required|in:pending,sent,skipped']);
         $recipient->update([
             'status'  => $data['status'],
             'sent_at' => $data['status'] === 'sent' ? now() : null,
             'sent_by' => $data['status'] === 'sent' ? $request->user()->id : null,
+            'via'     => $data['status'] === 'sent' ? 'manual' : null,
+            'error'   => null,
         ]);
 
         return $this->success($recipient);
@@ -224,6 +228,31 @@ class BroadcastController extends BaseController
         $this->authorizeAudience($request, $campaign->audience);
         $campaign->delete();
         return $this->success(null, 'تم حذف الحملة');
+    }
+
+    // نفس منطق fillMessage بالفرونت
+    public static function fillMessage(string $message, ?string $name): string
+    {
+        $name = trim((string) $name);
+        return str_replace('{الاسم}', $name !== '' ? $name : 'عميلنا العزيز', $message);
+    }
+
+    // PATCH /broadcast/campaigns/{campaign}/auto {action: start|pause}
+    public function autoSend(Request $request, WaCampaign $campaign): JsonResponse
+    {
+        $this->authorizeAudience($request, $campaign->audience);
+        $data = $request->validate(['action' => 'required|in:start,pause']);
+
+        if ($data['action'] === 'start') {
+            // الفاشلة بترجع للانتظار لما نعيد التشغيل
+            $campaign->recipients()->where('status', 'failed')->update(['status' => 'pending', 'error' => null]);
+            $campaign->update(['auto_status' => 'running', 'next_send_at' => null]);
+        } else {
+            $campaign->update(['auto_status' => 'paused']);
+        }
+
+        return $this->success($this->campaignPayload($campaign->fresh()),
+            $data['action'] === 'start' ? 'بدأ الإرسال التلقائي' : 'تم إيقاف الإرسال التلقائي مؤقتاً');
     }
 
     // 0501234567 / 501234567 / 00966... / +966... → 966501234567 (نفس منطق waPhone بالفرونت)

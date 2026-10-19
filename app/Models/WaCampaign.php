@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 // حملة رسائل واتساب جماعية
 class WaCampaign extends Model
 {
-    protected $fillable = ['title', 'audience', 'message', 'min_delay', 'max_delay', 'created_by'];
+    protected $fillable = ['title', 'audience', 'message', 'min_delay', 'max_delay', 'created_by', 'auto_status', 'next_send_at'];
+    protected $casts    = ['next_send_at' => 'datetime'];
 
     public function recipients(): HasMany  { return $this->hasMany(WaCampaignRecipient::class); }
     public function createdBy(): BelongsTo { return $this->belongsTo(Employee::class, 'created_by'); }

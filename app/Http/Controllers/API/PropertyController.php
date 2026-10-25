@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Models\{Property, PropertyDocument, NotificationLog};
+use App\Models\{Property, PropertyDocument, PropertyType, NotificationLog};
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class PropertyController extends BaseController
 {
+    private const DIRECTIONS = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية'];
+
     private function applyFilters($query, Request $request)
     {
         if ($request->search)       $query->where(function($q) use ($request) {
@@ -36,6 +38,13 @@ class PropertyController extends BaseController
         if ($request->price_min)         $query->where('listed_price', '>=', $request->price_min);
         if ($request->price_max)         $query->where('listed_price', '<=', $request->price_max);
         if ($request->code)              $query->where('property_code', 'like', "%{$request->code}%");
+        // فئة السعر: أقل من 4 مليون / بين 4 و10 / أعلى من 10
+        match ($request->price_range) {
+            'lt4'   => $query->where('listed_price', '<', 4_000_000),
+            '4to10' => $query->whereBetween('listed_price', [4_000_000, 10_000_000]),
+            'gt10'  => $query->where('listed_price', '>', 10_000_000),
+            default => null,
+        };
 
         return $query;
     }
@@ -62,19 +71,23 @@ class PropertyController extends BaseController
             'marketing'       => $base()->where('marketing_status', 'جاري')->count(),
         ];
 
-        $byType = $base()->selectRaw('property_type_id, count(*) as count')
-            ->whereNotNull('property_type_id')
-            ->groupBy('property_type_id')
-            ->with('propertyType:id,name')
-            ->get()
-            ->map(fn($r) => ['label' => $r->propertyType?->name ?? '—', 'count' => $r->count])
+        // كل أنواع العقارات المضافة (حتى اللي عددها صفر) — بتنعرض كبوكسات وبتنفع كخيارات للفلتر
+        // كل بوكسات القسم بتتجاهل فلتر القسم نفسه (حتى لما تختار نوع، باقي الأنواع ما بتصير صفر)
+        $baseWithout = fn(string $key) => $this->applyFilters(Property::query(), new Request($request->except([$key, 'page'])));
+
+        $typeCounts = $baseWithout('property_type_id')->selectRaw('property_type_id, count(*) as count')
+            ->whereNotNull('property_type_id')->groupBy('property_type_id')
+            ->pluck('count', 'property_type_id');
+        $byType = PropertyType::orderBy('id')->get(['id', 'name', 'is_active'])
+            ->filter(fn($t) => $t->is_active || isset($typeCounts[$t->id]))
+            ->map(fn($t) => ['id' => $t->id, 'label' => $t->name, 'count' => (int) ($typeCounts[$t->id] ?? 0)])
             ->values();
 
-        $byDirection = $base()->selectRaw('direction, count(*) as count')
-            ->whereNotNull('direction')
-            ->groupBy('direction')
-            ->get()
-            ->map(fn($r) => ['label' => $r->direction, 'count' => $r->count])
+        $dirCounts = $baseWithout('direction')->selectRaw('direction, count(*) as count')
+            ->whereNotNull('direction')->groupBy('direction')
+            ->pluck('count', 'direction');
+        $byDirection = collect(self::DIRECTIONS)
+            ->map(fn($d) => ['label' => $d, 'count' => (int) ($dirCounts[$d] ?? 0)])
             ->values();
 
         return response()->json([

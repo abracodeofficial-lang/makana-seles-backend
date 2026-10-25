@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Models\{Lead, NotificationLog, Employee, Owner};
+use App\Models\{Lead, NotificationLog, Employee, Owner, PropertyType, OperationPropertyTypeAssignment};
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LeadController extends BaseController
 {
+    private const PRICE_CATEGORIES = ['أقل من 4M', 'بين 4-10M', 'أعلى من 10M'];
+    private const DIRECTIONS       = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية'];
+    private const REQUEST_STATUSES = ['مفتوح', 'مغلق'];
+
     public function applyFilters($query, Request $request)
     {
         if ($request->search)        $query->where(function($q) use ($request) {
@@ -52,8 +56,12 @@ class LeadController extends BaseController
             'createdBy:id,full_name',
         ]), $request);
 
-        // إحصائيات وتوزيعات — بتتبع نفس الفلاتر المطبّقة على الجدول
-        $base = fn() => $this->applyFilters(Lead::query(), $request);
+        // إحصائيات وتوزيعات — بتتبع نفس الفلاتر المطبّقة على الجدول.
+        // كل قسم بوكسات بيتجاهل فلتره الخاص (حتى لما تختار قيمة، باقي القيم ما بتصير صفر).
+        $base        = fn() => $this->applyFilters(Lead::query(), $request);
+        $baseWithout = fn(string $key) => $this->applyFilters(Lead::query(), new Request($request->except([$key, 'page'])));
+        $countBy     = fn(string $filterKey, string $column) => $baseWithout($filterKey)
+            ->selectRaw("$column as k, count(*) as c")->whereNotNull($column)->groupBy($column)->pluck('c', 'k');
 
         $stats = [
             'total'        => $base()->count(),
@@ -63,27 +71,30 @@ class LeadController extends BaseController
             'inquiries'    => $base()->where('update_status','استفسار')->count(),
         ];
 
-        $groupCount = fn($column) => $base()->selectRaw("$column as label, count(*) as count")
-            ->whereNotNull($column)->groupBy($column)->get()->values();
+        $fixed = fn(array $values, $counts) => collect($values)
+            ->map(fn($v) => ['label' => $v, 'count' => (int) ($counts[$v] ?? 0)])->values();
 
-        $byBudget    = $groupCount('price_category');
-        $byDirection = $groupCount('direction');
-        $byStatus    = $groupCount('request_status');
+        $byBudget    = $fixed(self::PRICE_CATEGORIES, $countBy('price_category', 'price_category'));
+        $byDirection = $fixed(self::DIRECTIONS, $countBy('direction', 'direction'));
+        $byStatus    = $fixed(self::REQUEST_STATUSES, $countBy('request_status', 'request_status'));
 
-        $byType = $base()->selectRaw('property_type_id, count(*) as count')
-            ->whereNotNull('property_type_id')->groupBy('property_type_id')
-            ->with('propertyType:id,name')->get()
-            ->map(fn($r) => ['label' => $r->propertyType?->name ?? '—', 'count' => $r->count])->values();
+        $typeCounts = $countBy('property_type_id', 'property_type_id');
+        $byType = PropertyType::orderBy('id')->get(['id', 'name', 'is_active'])
+            ->filter(fn($t) => $t->is_active || isset($typeCounts[$t->id]))
+            ->map(fn($t) => ['id' => $t->id, 'label' => $t->name, 'count' => (int) ($typeCounts[$t->id] ?? 0)])->values();
 
-        $byOperation = $base()->selectRaw('operation_employee_id, count(*) as count')
-            ->whereNotNull('operation_employee_id')->groupBy('operation_employee_id')
-            ->with('operationEmployee:id,full_name')->get()
-            ->map(fn($r) => ['label' => $r->operationEmployee?->full_name ?? '—', 'count' => $r->count])->values();
+        // الأوبريشن: المخصصين من الإعدادات + أي حدا عنده مهتمين كأوبريشن
+        $opCounts = $countBy('employee_id', 'operation_employee_id');
+        $opIds = OperationPropertyTypeAssignment::pluck('employee_id')
+            ->merge(Lead::whereNotNull('operation_employee_id')->distinct()->pluck('operation_employee_id'))->unique();
+        $byOperation = Employee::whereIn('id', $opIds)->orderBy('full_name')->get(['id', 'full_name'])
+            ->map(fn($e) => ['id' => $e->id, 'label' => $e->full_name, 'count' => (int) ($opCounts[$e->id] ?? 0)])->values();
 
-        $bySpecialist = $base()->selectRaw('broker_employee_id, count(*) as count')
-            ->whereNotNull('broker_employee_id')->groupBy('broker_employee_id')
-            ->with('brokerEmployee:id,full_name')->get()
-            ->map(fn($r) => ['label' => $r->brokerEmployee?->full_name ?? '—', 'count' => $r->count])->values();
+        // الأخصائيين: أي حدا انحوّلوله مهتمين
+        $spCounts = $countBy('specialist_id', 'broker_employee_id');
+        $spIds = Lead::whereNotNull('broker_employee_id')->distinct()->pluck('broker_employee_id');
+        $bySpecialist = Employee::whereIn('id', $spIds)->orderBy('full_name')->get(['id', 'full_name'])
+            ->map(fn($e) => ['id' => $e->id, 'label' => $e->full_name, 'count' => (int) ($spCounts[$e->id] ?? 0)])->values();
 
         return response()->json([
             'status'        => true,

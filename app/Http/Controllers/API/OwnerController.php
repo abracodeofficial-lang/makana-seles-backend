@@ -2,12 +2,27 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Models\{Owner, Property, NotificationLog};
+use App\Models\{Owner, Property, PropertyType, NotificationLog};
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class OwnerController extends BaseController
 {
+    private const OWNER_TYPES = ['مالك', 'وكيل', 'وسيط', 'مكتب', 'مطور', 'مشروع'];
+    private const DIRECTIONS  = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية'];
+    private const PRICE_RANGES = ['lt4' => 'أقل من 4M', '4to10' => 'بين 4M-10M', 'gt10' => 'أعلى من 10M'];
+
+    // فئة السعر: أقل من 4 مليون / بين 4 و10 / أعلى من 10
+    public static function applyPriceRange($q, ?string $range)
+    {
+        return match ($range) {
+            'lt4'   => $q->where('listed_price', '<', 4_000_000),
+            '4to10' => $q->whereBetween('listed_price', [4_000_000, 10_000_000]),
+            'gt10'  => $q->where('listed_price', '>', 10_000_000),
+            default => $q,
+        };
+    }
+
     public function applyFilters($query, Request $request)
     {
         if ($request->search) {
@@ -31,6 +46,7 @@ class OwnerController extends BaseController
         if ($request->direction)        $query->whereHas('properties', fn($p) => $p->where('direction', $request->direction));
         if ($request->price_min)        $query->whereHas('properties', fn($p) => $p->where('listed_price', '>=', $request->price_min));
         if ($request->price_max)        $query->whereHas('properties', fn($p) => $p->where('listed_price', '<=', $request->price_max));
+        if ($request->price_range)      $query->whereHas('properties', fn($p) => self::applyPriceRange($p, $request->price_range));
 
         return $query;
     }
@@ -44,34 +60,45 @@ class OwnerController extends BaseController
             $request
         );
 
-        // إحصائيات أعلى الصفحة — بتتبع نفس الفلاتر المطبّقة على الجدول
-        $ownersBase = fn() => $this->applyFilters(Owner::query(), $request);
-        $propsBase  = fn() => Property::whereIn('owner_id', $ownersBase()->select('owners.id'));
+        // إحصائيات أعلى الصفحة — بتتبع نفس الفلاتر المطبّقة على الجدول.
+        // كل قسم بوكسات بيتجاهل فلتره الخاص (حتى لما تختار نوع، باقي الأنواع ما بتصير صفر).
+        $without    = fn(?string $key) => new Request($key ? $request->except([$key, 'page']) : $request->except('page'));
+        $ownersBase = fn(?string $key = null) => $this->applyFilters(Owner::query(), $without($key));
+        // عقارات الملاك المطابقين — ومع فلاتر العقار نفسها (النوع/الاتجاه/السعر) على مستوى العقار
+        $propsBase  = function (?string $key = null) use ($ownersBase, $without) {
+            $r = $without($key);
+            $q = Property::whereIn('owner_id', $ownersBase($key)->select('owners.id'));
+            if ($r->property_type_id) $q->where('property_type_id', $r->property_type_id);
+            if ($r->direction)        $q->where('direction', $r->direction);
+            if ($r->price_range)      self::applyPriceRange($q, $r->price_range);
+            return $q;
+        };
 
         $stats = [
             'total'               => $ownersBase()->count(),
-            'individuals'         => $ownersBase()->where('type', 'مالك')->count(),
-            'developers'          => $ownersBase()->where('type', 'مطور')->count(),
-            'offices'             => $ownersBase()->where('type', 'مكتب')->count(),
-            'projects'            => $ownersBase()->where('type', 'مشروع')->count(),
             'properties_added'    => $propsBase()->count(),
             'properties_accepted' => $propsBase()->where('status', 'متاح')->count(),
             'properties_verified' => $propsBase()->where('is_verified', true)->count(),
-            'avg_price'           => round((float) $propsBase()->avg('listed_price'), 2),
         ];
 
-        $byOwnerType = $ownersBase()->selectRaw('type, count(*) as count')
-            ->groupBy('type')->get()
-            ->map(fn($r) => ['label' => $r->type, 'count' => $r->count])->values();
+        $ownerTypeCounts = $ownersBase('type')->selectRaw('type, count(*) as count')->groupBy('type')->pluck('count', 'type');
+        $byOwnerType = collect(self::OWNER_TYPES)
+            ->map(fn($t) => ['label' => $t, 'count' => (int) ($ownerTypeCounts[$t] ?? 0)])->values();
 
-        $byPropertyType = $propsBase()->selectRaw('property_type_id, count(*) as count')
-            ->whereNotNull('property_type_id')->groupBy('property_type_id')
-            ->with('propertyType:id,name')->get()
-            ->map(fn($r) => ['label' => $r->propertyType?->name ?? '—', 'count' => $r->count])->values();
+        $typeCounts = $propsBase('property_type_id')->selectRaw('property_type_id, count(*) as count')
+            ->whereNotNull('property_type_id')->groupBy('property_type_id')->pluck('count', 'property_type_id');
+        $byPropertyType = PropertyType::orderBy('id')->get(['id', 'name', 'is_active'])
+            ->filter(fn($t) => $t->is_active || isset($typeCounts[$t->id]))
+            ->map(fn($t) => ['id' => $t->id, 'label' => $t->name, 'count' => (int) ($typeCounts[$t->id] ?? 0)])->values();
 
-        $byDirection = $propsBase()->selectRaw('direction, count(*) as count')
-            ->whereNotNull('direction')->groupBy('direction')->get()
-            ->map(fn($r) => ['label' => $r->direction, 'count' => $r->count])->values();
+        $dirCounts = $propsBase('direction')->selectRaw('direction, count(*) as count')
+            ->whereNotNull('direction')->groupBy('direction')->pluck('count', 'direction');
+        $byDirection = collect(self::DIRECTIONS)
+            ->map(fn($d) => ['label' => $d, 'count' => (int) ($dirCounts[$d] ?? 0)])->values();
+
+        $byPrice = collect(self::PRICE_RANGES)
+            ->map(fn($label, $key) => ['value' => $key, 'label' => $label,
+                'count' => self::applyPriceRange($propsBase('price_range'), $key)->count()])->values();
 
         return response()->json([
             'status'            => true,
@@ -79,6 +106,7 @@ class OwnerController extends BaseController
             'by_owner_type'     => $byOwnerType,
             'by_property_type'  => $byPropertyType,
             'by_direction'      => $byDirection,
+            'by_price'          => $byPrice,
             'data'              => $query->latest()->paginate(15)->toArray(),
         ]);
     }

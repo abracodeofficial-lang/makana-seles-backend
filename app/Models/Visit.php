@@ -42,8 +42,7 @@ class Visit extends Model
         static::creating(function (Visit $visit) {
             if (empty($visit->visit_code)) {
                 $year  = now()->year;
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $visit->visit_code = 'V-' . $year . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+                $visit->visit_code = \App\Support\SequentialCode::next(static::class, 'visit_code', 'V-' . $year . '-');
             }
         });
     }

@@ -160,8 +160,7 @@ class LeaveRequest extends Model
     {
         static::creating(function (LeaveRequest $req) {
             if (empty($req->request_number)) {
-                $count = static::count() + 1;
-                $req->request_number = 'LR-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+                $req->request_number = \App\Support\SequentialCode::next(static::class, 'request_number', 'LR-');
             }
             // حساب عدد الأيام تلقائياً
             if ($req->from_date && $req->to_date) {

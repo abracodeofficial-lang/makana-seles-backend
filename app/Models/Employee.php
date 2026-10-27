@@ -206,8 +206,7 @@ class Employee extends Authenticatable
         static::creating(function (Employee $emp) {
             if (empty($emp->employee_number)) {
                 $year  = now()->year;
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $emp->employee_number = 'E-' . $year . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+                $emp->employee_number = \App\Support\SequentialCode::next(static::class, 'employee_number', 'E-' . $year . '-');
             }
         });
     }

@@ -79,8 +79,7 @@ class PermissionRequest extends Model
     {
         static::creating(function (PermissionRequest $req) {
             if (empty($req->request_number)) {
-                $count = static::count() + 1;
-                $req->request_number = 'PR-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+                $req->request_number = \App\Support\SequentialCode::next(static::class, 'request_number', 'PR-');
             }
         });
     }

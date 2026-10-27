@@ -46,8 +46,7 @@ class Owner extends Model
         static::creating(function (Owner $owner) {
             if (empty($owner->owner_code)) {
                 $year  = now()->year;
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $owner->owner_code = 'OW-' . $year . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+                $owner->owner_code = \App\Support\SequentialCode::next(static::class, 'owner_code', 'OW-' . $year . '-');
             }
         });
     }

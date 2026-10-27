@@ -85,8 +85,7 @@ class Property extends Model
         static::creating(function (Property $prop) {
             if (empty($prop->property_code)) {
                 $year  = now()->year;
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $prop->property_code = 'RE-' . $year . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
+                $prop->property_code = \App\Support\SequentialCode::next(static::class, 'property_code', 'RE-' . $year . '-');
             }
             if ($prop->total_area > 0) {
                 $prop->price_per_meter = round($prop->listed_price / $prop->total_area, 2);

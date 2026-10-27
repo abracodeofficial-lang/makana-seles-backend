@@ -11,6 +11,28 @@ class PropertyController extends BaseController
 {
     private const DIRECTIONS = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية'];
 
+    // أعمدة بالـDB ما بتقبل NULL (إلها قيمة افتراضية) — حقل فاضي بالفورم بيوصل null وبيعمل 500
+    private const NOT_NULL_DEFAULTS = [
+        'listed_price' => 0, 'net_price' => 0, 'price_per_meter' => 0, 'market_price_3months' => 0,
+        'discount_amount' => 0, 'total_area' => 0, 'land_area' => 0, 'building_area' => 0,
+        'mortgage_amount' => 0, 'annual_income' => 0, 'annual_return_rate' => 0, 'tenants_count' => 0,
+        'rooms_count' => 0, 'bathrooms_count' => 0, 'halls_count' => 0, 'kitchens_count' => 0,
+        'floors_count' => 0, 'units_count' => 1, 'street_width' => 0, 'building_age' => 0,
+        'photos_count' => 0, 'commission_rate' => 0,
+        'is_verified' => false, 'is_furnished' => false, 'has_pool' => false, 'has_garden' => false,
+        'has_elevator' => false, 'has_internet' => false, 'has_security' => false, 'has_brokerage_contract' => false,
+        'status' => 'متاح', 'mortgage_status' => 'غير مرهون', 'rental_status' => 'غير مؤجر', 'parking' => 'غير متوفر',
+        'photo_status' => 'جديد', 'design_status' => 'جديد', 'video_status' => 'جديد', 'marketing_status' => 'جديد',
+    ];
+
+    private function fillDefaults(array $data): array
+    {
+        foreach (self::NOT_NULL_DEFAULTS as $key => $default) {
+            if (array_key_exists($key, $data) && $data[$key] === null) $data[$key] = $default;
+        }
+        return $data;
+    }
+
     private function applyFilters($query, Request $request)
     {
         if ($request->search)       $query->where(function($q) use ($request) {
@@ -203,6 +225,7 @@ class PropertyController extends BaseController
             'commission_rate'    => 'nullable|numeric|min:0|max:100',
         ]);
 
+        $data = $this->fillDefaults($data);
         $data['created_by'] = $request->user()->id;
         $property = Property::create($data);
 
@@ -221,7 +244,7 @@ class PropertyController extends BaseController
     public function update(Request $request, int $id): JsonResponse
     {
         $property = Property::findOrFail($id);
-        $property->update($request->except(['property_code', 'created_by']));
+        $property->update($this->fillDefaults($request->except(['property_code', 'created_by'])));
         return $this->success($property->fresh(['owner', 'propertyType', 'city']), 'تم تحديث العقار');
     }
 

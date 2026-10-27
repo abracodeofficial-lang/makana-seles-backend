@@ -139,7 +139,7 @@ class OwnerController extends BaseController
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'                      => 'required|string|max:255',
+            'name'                      => 'nullable|string|max:255',
             'type'                      => 'required|in:مالك,وكيل,وسيط,مكتب,مطور,مشروع',
             'phone'                     => 'required|string|max:20',
             'whatsapp'                  => 'nullable|string|max:20',
@@ -181,7 +181,7 @@ class OwnerController extends BaseController
         $owner = Owner::findOrFail($id);
 
         $data = $request->validate([
-            'name'                     => 'sometimes|string|max:255',
+            'name'                     => 'sometimes|nullable|string|max:255',
             'type'                     => 'sometimes|in:مالك,وكيل,وسيط,مكتب,مطور,مشروع',
             'phone'                    => 'sometimes|string|max:20',
             'whatsapp'                 => 'nullable|string|max:20',

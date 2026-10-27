@@ -136,7 +136,7 @@ class LeadController extends BaseController
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name'                  => 'required|string|max:255',
+            'name'                  => 'nullable|string|max:255',
             'phone'                 => 'required|string|max:20',
             'applicant_type'        => 'required|in:مهتم,مشتري,مستأجر,وسيط,وكيل,مطور',
             'source'                => 'required|string',

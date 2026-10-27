@@ -184,7 +184,7 @@ class PropertyController extends BaseController
             'longitude'          => 'nullable|numeric',
             'nearby_places'      => 'nullable|string',
             // المالك
-            'owner_id'           => 'required|exists:owners,id',
+            'owner_id'           => 'nullable|exists:owners,id',
             'advertiser_role'    => 'nullable|in:مالك,وكيل,مطور',
             'mortgage_status'    => 'nullable|in:مرهون,غير مرهون',
             'mortgage_amount'    => 'nullable|numeric',

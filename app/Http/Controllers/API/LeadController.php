@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class LeadController extends BaseController
 {
     private const PRICE_CATEGORIES = ['أقل من 4M', 'بين 4-10M', 'أعلى من 10M'];
-    private const DIRECTIONS       = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية'];
+    private const DIRECTIONS       = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية', 'وسطى'];
     private const REQUEST_STATUSES = ['مفتوح', 'مغلق'];
 
     // بيانات العقار اللي بتنعرض مع المهتم: الكود - الحي - المنطقة - السعر - النوع
@@ -149,7 +149,7 @@ class LeadController extends BaseController
             'applicant_type'        => 'required|in:مهتم,مشتري,مستأجر,وسيط,وكيل,مطور',
             'source'                => 'required|string',
             'property_type_id'      => 'nullable|exists:property_types,id',
-            'direction'             => 'nullable|in:شمالية,جنوبية,شرقية,غربية,شمالية شرقية,شمالية غربية,جنوبية شرقية,جنوبية غربية',
+            'direction'             => 'nullable|in:شمالية,جنوبية,شرقية,غربية,شمالية شرقية,شمالية غربية,جنوبية شرقية,جنوبية غربية,وسطى',
             'city_id'               => 'nullable|exists:cities,id',
             'neighborhood_id'       => 'nullable|exists:neighborhoods,id',
             'offered_price'         => 'nullable|numeric',

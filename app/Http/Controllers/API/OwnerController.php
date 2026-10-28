@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class OwnerController extends BaseController
 {
     private const OWNER_TYPES = ['مالك', 'وكيل', 'وسيط', 'مكتب', 'مطور', 'مشروع'];
-    private const DIRECTIONS  = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية'];
+    private const DIRECTIONS  = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية', 'وسطى'];
     private const PRICE_RANGES = ['lt4' => 'أقل من 4M', '4to10' => 'بين 4M-10M', 'gt10' => 'أعلى من 10M'];
 
     // كود المالك بيتولّد من آخر 4 أرقام بالواتساب — فالواتساب إجباري

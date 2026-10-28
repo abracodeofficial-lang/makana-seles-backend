@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class PropertyController extends BaseController
 {
-    private const DIRECTIONS = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية'];
+    private const DIRECTIONS = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية', 'وسطى'];
 
     // أعمدة بالـDB ما بتقبل NULL (إلها قيمة افتراضية) — حقل فاضي بالفورم بيوصل null وبيعمل 500
     private const NOT_NULL_DEFAULTS = [

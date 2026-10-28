@@ -12,6 +12,13 @@ class OwnerController extends BaseController
     private const DIRECTIONS  = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية'];
     private const PRICE_RANGES = ['lt4' => 'أقل من 4M', '4to10' => 'بين 4M-10M', 'gt10' => 'أعلى من 10M'];
 
+    // كود المالك بيتولّد من آخر 4 أرقام بالواتساب — فالواتساب إجباري
+    private const WHATSAPP_MESSAGES = [
+        'whatsapp.required' => 'رقم الواتساب مطلوب',
+        'whatsapp.regex'    => 'رقم الواتساب لازم يكون فيه 4 أرقام على الأقل',
+        'whatsapp.max'      => 'رقم الواتساب طويل',
+    ];
+
     // فئة السعر: أقل من 4 مليون / بين 4 و10 / أعلى من 10
     public static function applyPriceRange($q, ?string $range)
     {
@@ -136,13 +143,27 @@ class OwnerController extends BaseController
     }
 
     // POST /api/owners
+    // الأرقام العربية (٠٥٠…) → إنجليزية بالجوال والواتساب قبل الفحص والحفظ
+    private function normalizeNumbers(Request $request): void
+    {
+        foreach (['phone', 'whatsapp'] as $key) {
+            if (is_string($request->input($key))) {
+                $request->merge([$key => strtr($request->input($key), [
+                    '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+                    '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+                ])]);
+            }
+        }
+    }
+
     public function store(Request $request): JsonResponse
     {
+        $this->normalizeNumbers($request);
         $data = $request->validate([
             'name'                      => 'nullable|string|max:255',
             'type'                      => 'required|in:مالك,وكيل,وسيط,مكتب,مطور,مشروع',
             'phone'                     => 'required|string|max:20',
-            'whatsapp'                  => 'nullable|string|max:20',
+            'whatsapp'                  => ['required', 'string', 'max:20', 'regex:/(\D*\d){4,}/'],
             'email'                     => 'nullable|email',
             'city_id'                   => 'nullable|exists:cities,id',
             'address'                   => 'nullable|string',
@@ -159,7 +180,7 @@ class OwnerController extends BaseController
             'sales_employee_owners_id'  => 'nullable|exists:employees,id',
             'sales_employee_leads_id'   => 'nullable|exists:employees,id',
             'notes'                     => 'nullable|string',
-        ]);
+        ], self::WHATSAPP_MESSAGES);
 
         $data['created_by'] = $request->user()->id;
         $owner = Owner::create($data);
@@ -179,12 +200,13 @@ class OwnerController extends BaseController
     public function update(Request $request, int $id): JsonResponse
     {
         $owner = Owner::findOrFail($id);
+        $this->normalizeNumbers($request);
 
         $data = $request->validate([
             'name'                     => 'sometimes|nullable|string|max:255',
             'type'                     => 'sometimes|in:مالك,وكيل,وسيط,مكتب,مطور,مشروع',
             'phone'                    => 'sometimes|string|max:20',
-            'whatsapp'                 => 'nullable|string|max:20',
+            'whatsapp'                 => ['sometimes', 'required', 'string', 'max:20', 'regex:/(\D*\d){4,}/'],
             'email'                    => 'nullable|email',
             'city_id'                  => 'nullable|exists:cities,id',
             'address'                  => 'nullable|string',
@@ -201,7 +223,7 @@ class OwnerController extends BaseController
             'sales_employee_owners_id' => 'nullable|exists:employees,id',
             'sales_employee_leads_id'  => 'nullable|exists:employees,id',
             'notes'                    => 'nullable|string',
-        ]);
+        ], self::WHATSAPP_MESSAGES);
 
         $owner->update($data);
 

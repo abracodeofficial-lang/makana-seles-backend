@@ -45,9 +45,24 @@ class Owner extends Model
     {
         static::creating(function (Owner $owner) {
             if (empty($owner->owner_code)) {
-                $year  = now()->year;
-                $owner->owner_code = \App\Support\SequentialCode::next(static::class, 'owner_code', 'OW-' . $year . '-');
+                $owner->owner_code = static::codeFromWhatsapp($owner->whatsapp ?: $owner->phone)
+                    ?? \App\Support\SequentialCode::next(static::class, 'owner_code', 'OW-' . now()->year . '-');
             }
         });
+    }
+
+    // كود المالك = آخر 4 أرقام من رقم الواتساب (2442). إذا مستخدم: 2442-2، 2442-3...
+    // (مع المحذوفين لأن الكود unique بالـDB)
+    public static function codeFromWhatsapp(?string $number): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) $number);
+        if (strlen($digits) < 4) return null;
+
+        $base = substr($digits, -4);
+        $code = $base;
+        for ($i = 2; static::withTrashed()->where('owner_code', $code)->exists(); $i++) {
+            $code = $base . '-' . $i;
+        }
+        return $code;
     }
 }

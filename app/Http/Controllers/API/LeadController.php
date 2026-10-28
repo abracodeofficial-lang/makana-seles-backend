@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Models\{Lead, NotificationLog, Employee, Owner, PropertyType, OperationPropertyTypeAssignment};
+use App\Models\{Lead, NotificationLog, Employee, Owner, Property, PropertyType, OperationPropertyTypeAssignment};
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -12,12 +12,17 @@ class LeadController extends BaseController
     private const DIRECTIONS       = ['شمالية', 'جنوبية', 'شرقية', 'غربية', 'شمالية شرقية', 'شمالية غربية', 'جنوبية شرقية', 'جنوبية غربية'];
     private const REQUEST_STATUSES = ['مفتوح', 'مغلق'];
 
+    // بيانات العقار اللي بتنعرض مع المهتم: الكود - الحي - المنطقة - السعر - النوع
+    private const PROPERTY_SUMMARY      = 'properties:id,property_code,property_type_id,city_id,neighborhood_id,listed_price';
+    private const PROPERTY_SUMMARY_RELS = ['properties.propertyType:id,name', 'properties.city:id,name', 'properties.neighborhood:id,name'];
+
     public function applyFilters($query, Request $request)
     {
         if ($request->search)        $query->where(function($q) use ($request) {
             $q->where('name','like',"%{$request->search}%")
               ->orWhere('phone','like',"%{$request->search}%")
-              ->orWhere('lead_code','like',"%{$request->search}%");
+              ->orWhere('lead_code','like',"%{$request->search}%")
+              ->orWhereHas('properties', fn($p) => $p->where('property_code', 'like', "%{$request->search}%"));
         });
         if ($request->classification)    $query->where('classification', $request->classification);
         if ($request->request_status)    $query->where('request_status', $request->request_status);
@@ -54,6 +59,8 @@ class LeadController extends BaseController
             'operationEmployee:id,full_name',
             'brokerEmployee:id,full_name',
             'createdBy:id,full_name',
+            self::PROPERTY_SUMMARY,
+            ...self::PROPERTY_SUMMARY_RELS,
         ]), $request);
 
         // إحصائيات وتوزيعات — بتتبع نفس الفلاتر المطبّقة على الجدول.
@@ -128,6 +135,7 @@ class LeadController extends BaseController
             'propertyType','city','neighborhood',
             'paymentMethod','operationEmployee','brokerEmployee',
             'createdBy','visits.property','visits.assignedEmployee',
+            self::PROPERTY_SUMMARY, ...self::PROPERTY_SUMMARY_RELS,
         ])->findOrFail($id);
         $lead->follow_up_status_computed = $lead->follow_up_status;
         return $this->success($lead);
@@ -155,17 +163,46 @@ class LeadController extends BaseController
             'broker_employee_id'    => 'nullable|exists:employees,id',
             'follow_up_date'        => 'nullable|date',
             'update_notes'          => 'nullable|string',
+            'property_ids'          => 'nullable|array',
+            'property_ids.*'        => 'integer|exists:properties,id',
         ]);
         $data['created_by'] = $request->user()->id;
+        unset($data['property_ids']);
         $lead = Lead::create($data);
-        return $this->success($lead->load(['propertyType','city']), 'تم إضافة المهتم بنجاح', 201);
+        $lead->properties()->sync($request->input('property_ids') ?? []);
+        return $this->success($lead->load(['propertyType', 'city', self::PROPERTY_SUMMARY, ...self::PROPERTY_SUMMARY_RELS]), 'تم إضافة المهتم بنجاح', 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
     {
         $lead = Lead::findOrFail($id);
-        $lead->update($request->except(['lead_code','created_by']));
-        return $this->success($lead->fresh(), 'تم تحديث بيانات المهتم');
+        $request->validate([
+            'property_ids'   => 'nullable|array',
+            'property_ids.*' => 'integer|exists:properties,id',
+        ]);
+        $lead->update($request->except(['lead_code', 'created_by', 'property_ids']));
+        if ($request->has('property_ids')) $lead->properties()->sync($request->input('property_ids') ?? []);
+        return $this->success($lead->fresh()->load([self::PROPERTY_SUMMARY, ...self::PROPERTY_SUMMARY_RELS]), 'تم تحديث بيانات المهتم');
+    }
+
+    // GET /api/leads/property-lookup?code=RE-2026-001 — بيانات عقار بالكود لربطه بالمهتم
+    public function propertyLookup(Request $request): JsonResponse
+    {
+        $code = trim((string) $request->query('code', ''));
+        if ($code === '') return $this->error('اكتب كود العقار', 422);
+
+        $columns = ['id', 'property_code', 'property_type_id', 'city_id', 'neighborhood_id', 'listed_price'];
+        $with    = ['propertyType:id,name', 'city:id,name', 'neighborhood:id,name'];
+
+        $property = Property::with($with)->where('property_code', $code)->first($columns);
+        // لو كتب آخر الكود بس (مثلاً 015) وفي عقار واحد بينتهي فيه
+        if (!$property) {
+            $matches = Property::with($with)->where('property_code', 'like', '%' . $code)->limit(2)->get($columns);
+            if ($matches->count() === 1) $property = $matches->first();
+        }
+        if (!$property) return $this->error('ما في عقار بهاد الكود', 404);
+
+        return $this->success($property);
     }
 
     public function destroy(int $id): JsonResponse

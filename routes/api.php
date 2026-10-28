@@ -101,6 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/',                       [LeadController::class, 'store']);
         Route::get('operation-dashboard',      [LeadController::class, 'operationDashboard']);
         Route::get('export',                   [LeadController::class, 'export']);
+        Route::get('property-lookup',          [LeadController::class, 'propertyLookup']);
         Route::get('{id}',                     [LeadController::class, 'show']);
         Route::put('{id}',                     [LeadController::class, 'update']);
         Route::delete('{id}',                  [LeadController::class, 'destroy']);

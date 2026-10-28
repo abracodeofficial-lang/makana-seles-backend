@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany};
+use Illuminate\Database\Eloquent\Relations\{BelongsTo, BelongsToMany, HasMany};
 
 class Lead extends Model
 {
@@ -46,6 +46,7 @@ class Lead extends Model
     public function brokerEmployee(): BelongsTo    { return $this->belongsTo(Employee::class, 'broker_employee_id'); }
     public function createdBy(): BelongsTo         { return $this->belongsTo(Employee::class, 'created_by'); }
     public function visits(): HasMany              { return $this->hasMany(Visit::class); }
+    public function properties(): BelongsToMany    { return $this->belongsToMany(Property::class)->withTimestamps(); }
 
     public function getFollowUpStatusAttribute(): string
     {

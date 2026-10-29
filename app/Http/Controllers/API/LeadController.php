@@ -163,6 +163,7 @@ class LeadController extends BaseController
             'broker_employee_id'    => 'nullable|exists:employees,id',
             'follow_up_date'        => 'nullable|date',
             'update_notes'          => 'nullable|string',
+            'request_status'        => 'nullable|in:مفتوح,مغلق',
             'property_ids'          => 'nullable|array',
             'property_ids.*'        => 'integer|exists:properties,id',
         ]);
@@ -177,6 +178,7 @@ class LeadController extends BaseController
     {
         $lead = Lead::findOrFail($id);
         $request->validate([
+            'request_status' => 'nullable|in:مفتوح,مغلق',
             'property_ids'   => 'nullable|array',
             'property_ids.*' => 'integer|exists:properties,id',
         ]);

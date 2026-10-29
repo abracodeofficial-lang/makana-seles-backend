@@ -164,6 +164,8 @@ class LeadController extends BaseController
             'follow_up_date'        => 'nullable|date',
             'update_notes'          => 'nullable|string',
             'request_status'        => 'nullable|in:مفتوح,مغلق',
+            'update_status'         => 'nullable|in:' . implode(',', Lead::UPDATE_STATUSES),
+            'update_date'           => 'nullable|date',
             'property_ids'          => 'nullable|array',
             'property_ids.*'        => 'integer|exists:properties,id',
         ]);
@@ -179,6 +181,9 @@ class LeadController extends BaseController
         $lead = Lead::findOrFail($id);
         $request->validate([
             'request_status' => 'nullable|in:مفتوح,مغلق',
+            'update_status'  => 'nullable|in:' . implode(',', Lead::UPDATE_STATUSES),
+            'update_date'    => 'nullable|date',
+            'follow_up_date' => 'nullable|date',
             'property_ids'   => 'nullable|array',
             'property_ids.*' => 'integer|exists:properties,id',
         ]);
@@ -216,7 +221,7 @@ class LeadController extends BaseController
     public function updateStatus(Request $request, int $id): JsonResponse
     {
         $request->validate([
-            'update_status'  => 'required|in:تم البيع,استفسار,اهتمام أولي,اهتمام عالي,طلبات بحث',
+            'update_status'  => 'required|in:' . implode(',', Lead::UPDATE_STATUSES),
             'update_notes'   => 'nullable|string',
             'follow_up_date' => 'nullable|date',
         ]);

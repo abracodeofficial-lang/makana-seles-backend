@@ -37,6 +37,7 @@ class Lead extends Model
     // مسار مراحل الأخصائي — للعرض والترتيب بالواجهة فقط، التقدم مرن وليس إجبارياً
     public const SPECIALIST_STAGES = ['تواصل', 'معلومات واستفسارات', 'زيارة', 'إقناع', 'تفاوض', 'تفاهم', 'حجز'];
     public const OPERATION_STATUSES = ['يبغى تواصل هاتفي', 'عنده استفسارات أكثر', 'اهتمام مبدئي'];
+    public const UPDATE_STATUSES    = ['تم البيع', 'استفسار', 'طلبات بحث', 'اهتمام أولي', 'اهتمام عالي', 'اقتراحات أخرى'];
 
     public function propertyType(): BelongsTo      { return $this->belongsTo(PropertyType::class); }
     public function city(): BelongsTo              { return $this->belongsTo(City::class); }
@@ -78,6 +79,11 @@ class Lead extends Model
                 $year  = now()->year;
                 $lead->lead_code = \App\Support\SequentialCode::next(static::class, 'lead_code', 'INT-' . $year . '-');
             }
+        });
+
+        // الطلب المغلق ما إله متابعة
+        static::saving(function (Lead $lead) {
+            if ($lead->request_status === 'مغلق') $lead->follow_up_date = null;
         });
     }
 }

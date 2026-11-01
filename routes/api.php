@@ -102,6 +102,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('{type}/{id}/restore', 'restore');
     });
 
+    // سجل العمليات (للأدمن فقط — الفحص بالكنترولر)
+    Route::get('audit-logs', [\App\Http\Controllers\API\AuditLogController::class, 'index']);
+
     // المهتمون
     Route::prefix('leads')->group(function () {
         Route::get('/',                        [LeadController::class, 'index']);

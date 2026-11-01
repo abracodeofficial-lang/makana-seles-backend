@@ -172,7 +172,7 @@ class LeadController extends BaseController
         $data['created_by'] = $request->user()->id;
         unset($data['property_ids']);
         $lead = Lead::create($data);
-        $lead->properties()->sync($request->input('property_ids') ?? []);
+        $this->syncProperties($lead, $request->input('property_ids') ?? []);
         return $this->success($lead->load(['propertyType', 'city', self::PROPERTY_SUMMARY, ...self::PROPERTY_SUMMARY_RELS]), 'تم إضافة المهتم بنجاح', 201);
     }
 
@@ -188,8 +188,15 @@ class LeadController extends BaseController
             'property_ids.*' => 'integer|exists:properties,id',
         ]);
         $lead->update($request->except(['lead_code', 'created_by', 'property_ids']));
-        if ($request->has('property_ids')) $lead->properties()->sync($request->input('property_ids') ?? []);
+        if ($request->has('property_ids')) $this->syncProperties($lead, $request->input('property_ids') ?? []);
         return $this->success($lead->fresh()->load([self::PROPERTY_SUMMARY, ...self::PROPERTY_SUMMARY_RELS]), 'تم تحديث بيانات المهتم');
+    }
+
+    private function syncProperties(Lead $lead, array $ids): void
+    {
+        $old = $lead->properties()->pluck('property_code')->all();
+        $lead->properties()->sync($ids);
+        \App\Support\AuditTrail::relationChanged($lead, 'properties', $old, $lead->properties()->pluck('property_code')->all());
     }
 
     // GET /api/leads/property-lookup?code=RE-2026-001 — بيانات عقار بالكود لربطه بالمهتم

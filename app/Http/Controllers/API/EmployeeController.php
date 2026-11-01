@@ -141,6 +141,7 @@ class EmployeeController extends BaseController
         // تعيين مجموعة الصلاحيات
         if (!empty($data['permission_group_id'])) {
             $employee->permissionGroups()->attach($data['permission_group_id']);
+            \App\Support\AuditTrail::relationChanged($employee, 'permission_groups', [], $employee->permissionGroups()->pluck('name')->all());
         }
 
         // إنشاء رصيد الإجازات للسنة الحالية

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\AuditTrail;
 use App\Support\ColumnDefaults;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -28,5 +29,14 @@ class AppServiceProvider extends ServiceProvider
                 ColumnDefaults::apply($model);
             }
         });
+
+        // سجل العمليات: كل إضافة/تعديل/حذف/استرجاع (شوف App\Support\AuditTrail)
+        foreach (['created', 'updated', 'deleted', 'restored'] as $action) {
+            Event::listen("eloquent.$action: *", function (string $event, array $models) use ($action) {
+                foreach ($models as $model) {
+                    AuditTrail::handle($action, $model);
+                }
+            });
+        }
     }
 }

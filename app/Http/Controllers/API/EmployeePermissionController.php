@@ -22,9 +22,11 @@ class EmployeePermissionController extends BaseController
             'permission_group_id.exists' => 'مجموعة الصلاحيات المختارة غير موجودة',
         ]);
 
+        $old = $employee->permissionGroups()->pluck('name')->all();
         $employee->permissionGroups()->sync(
             !empty($data['permission_group_id']) ? [$data['permission_group_id']] : []
         );
+        \App\Support\AuditTrail::relationChanged($employee, 'permission_groups', $old, $employee->permissionGroups()->pluck('name')->all());
 
         return $this->success(null, 'تم تحديث مجموعة صلاحيات الموظف');
     }

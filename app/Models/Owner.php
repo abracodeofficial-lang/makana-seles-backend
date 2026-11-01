@@ -3,12 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany};
 
 class Owner extends Model
 {
-    use SoftDeletes;
+    use \App\Support\TracksDeletion;
 
     protected $fillable = [
         'owner_code', 'name', 'type', 'phone', 'whatsapp', 'email', 'city_id', 'address',
@@ -24,7 +23,7 @@ class Owner extends Model
         'agreement_end_date' => 'date',
     ];
 
-    public function city(): BelongsTo                { return $this->belongsTo(City::class); }
+    public function city(): BelongsTo                { return $this->belongsTo(City::class)->withTrashed(); }
     public function properties(): HasMany             { return $this->hasMany(Property::class); }
     public function salesEmployeeOwners(): BelongsTo  { return $this->belongsTo(Employee::class, 'sales_employee_owners_id'); }
     public function salesEmployeeLeads(): BelongsTo   { return $this->belongsTo(Employee::class, 'sales_employee_leads_id'); }

@@ -40,7 +40,7 @@ class PermissionGroupController extends BaseController
         if ($err = $this->authorizeAction($request, 'add')) return $err;
 
         $data = $request->validate([
-            'name'        => 'required|string|max:255|unique:permission_groups,name',
+            'name'        => 'required|string|max:255|unique:permission_groups,name,NULL,id,deleted_at,NULL',
             'description' => 'nullable|string',
             'pages'       => 'nullable|array',
         ], [
@@ -66,7 +66,7 @@ class PermissionGroupController extends BaseController
         $group = PermissionGroup::findOrFail($id);
 
         $data = $request->validate([
-            'name'        => 'required|string|max:255|unique:permission_groups,name,' . $id,
+            'name'        => 'required|string|max:255|unique:permission_groups,name,' . $id . ',id,deleted_at,NULL',
             'description' => 'nullable|string',
             'pages'       => 'nullable|array',
         ], [

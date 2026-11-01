@@ -64,6 +64,7 @@ class AuthController extends BaseController
         return $this->success([
             'employee'    => $employee,
             'permissions' => $permissions,
+            'is_admin'    => $employee->isAdmin(),
             'unread_notifications' => NotificationLog::where('employee_id', $employee->id)
                 ->where('is_read', false)->count(),
         ]);

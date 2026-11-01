@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Storage;
 // ============================================================
 class EmployeeDocument extends Model
 {
+    use \App\Support\TracksDeletion;
+
     protected $fillable = ['employee_id', 'type', 'name', 'file_path', 'file_name'];
 
     protected $appends = ['file_url'];

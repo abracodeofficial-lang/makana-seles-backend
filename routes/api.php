@@ -95,6 +95,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('{id}/documents/{docId}',     [PropertyController::class, 'deleteDocument']);
     });
 
+    // المحذوفات (للأدمن فقط — الفحص بالكنترولر)
+    Route::prefix('trash')->controller(\App\Http\Controllers\API\TrashController::class)->group(function () {
+        Route::get('summary',            'summary');
+        Route::get('/',                  'index');
+        Route::post('{type}/{id}/restore', 'restore');
+    });
+
     // المهتمون
     Route::prefix('leads')->group(function () {
         Route::get('/',                        [LeadController::class, 'index']);

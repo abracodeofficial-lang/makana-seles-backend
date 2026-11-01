@@ -28,7 +28,7 @@ class LeaveRequest extends Model
 
     // ---- Relations ----
     public function employee(): BelongsTo   { return $this->belongsTo(Employee::class); }
-    public function leaveType(): BelongsTo  { return $this->belongsTo(LeaveType::class); }
+    public function leaveType(): BelongsTo  { return $this->belongsTo(LeaveType::class)->withTrashed(); }
     public function manager(): BelongsTo    { return $this->belongsTo(Employee::class, 'manager_id'); }
     public function hrEmployee(): BelongsTo { return $this->belongsTo(Employee::class, 'hr_employee_id'); }
     public function autoLeave(): \Illuminate\Database\Eloquent\Relations\HasOne

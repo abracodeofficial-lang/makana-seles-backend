@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PermissionGroup extends Model
 {
+    use \App\Support\TracksDeletion;
+
     protected $fillable = ['name', 'description'];
 
     public function pages(): \Illuminate\Database\Eloquent\Relations\HasMany

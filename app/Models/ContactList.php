@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 // قائمة أرقام محفوظة (ملاك أو مهتمين) لإعادة استخدامها بالرسائل الجماعية
 class ContactList extends Model
 {
+    use \App\Support\TracksDeletion;
+
     protected $fillable = ['name', 'audience', 'created_by'];
 
     public function members(): HasMany     { return $this->hasMany(ContactListMember::class); }

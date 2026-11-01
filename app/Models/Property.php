@@ -3,12 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany};
 
 class Property extends Model
 {
-    use SoftDeletes;
+    use \App\Support\TracksDeletion;
 
     protected $fillable = [
         'property_code', 'name', 'property_type_id', 'marketing_type_id',
@@ -52,11 +51,11 @@ class Property extends Model
     ];
 
     public function owner(): BelongsTo            { return $this->belongsTo(Owner::class); }
-    public function propertyType(): BelongsTo     { return $this->belongsTo(PropertyType::class); }
+    public function propertyType(): BelongsTo     { return $this->belongsTo(PropertyType::class)->withTrashed(); }
     public function marketingType(): BelongsTo    { return $this->belongsTo(MarketingType::class); }
     public function usageType(): BelongsTo        { return $this->belongsTo(UsageType::class); }
-    public function city(): BelongsTo             { return $this->belongsTo(City::class); }
-    public function neighborhood(): BelongsTo     { return $this->belongsTo(Neighborhood::class); }
+    public function city(): BelongsTo             { return $this->belongsTo(City::class)->withTrashed(); }
+    public function neighborhood(): BelongsTo     { return $this->belongsTo(Neighborhood::class)->withTrashed(); }
     public function assignedEmployee(): BelongsTo { return $this->belongsTo(Employee::class, 'assigned_employee_id'); }
     public function createdBy(): BelongsTo        { return $this->belongsTo(Employee::class, 'created_by'); }
     public function documents(): HasMany          { return $this->hasMany(PropertyDocument::class); }

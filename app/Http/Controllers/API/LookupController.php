@@ -22,8 +22,8 @@ class LookupController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:100',
-            'code' => 'nullable|string|max:10',
-        ]);
+            'code' => 'nullable|string|max:10|unique:cities,code',
+        ], ['code.unique' => 'كود المدينة مستخدم (ممكن يكون لمدينة بالمحذوفات)']);
         return response()->json(['status' => true, 'data' => City::create($data)], 201);
     }
 
@@ -32,8 +32,8 @@ class LookupController extends Controller
         $city = City::findOrFail($id);
         $data = $request->validate([
             'name' => 'required|string|max:100',
-            'code' => 'nullable|string|max:10',
-        ]);
+            'code' => 'nullable|string|max:10|unique:cities,code,' . $id,
+        ], ['code.unique' => 'كود المدينة مستخدم (ممكن يكون لمدينة بالمحذوفات)']);
         $city->update($data);
         return response()->json(['status' => true, 'data' => $city]);
     }
@@ -138,7 +138,9 @@ class LookupController extends Controller
             'employee_id'      => 'required|exists:employees,id',
             'property_type_id' => 'required|exists:property_types,id',
         ]);
-        $assignment = \App\Models\OperationPropertyTypeAssignment::firstOrCreate($data);
+        // التخصيص المحذوف بيرجع بدل ما يتكرر (في فهرس فريد على الموظف + النوع)
+        $assignment = \App\Models\OperationPropertyTypeAssignment::withTrashed()->firstOrCreate($data);
+        if ($assignment->trashed()) $assignment->restore();
         return response()->json([
             'status' => true,
             'data'   => $assignment->load(['employee:id,full_name', 'propertyType:id,name']),

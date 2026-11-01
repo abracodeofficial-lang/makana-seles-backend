@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 // ============================================================
 class NotificationLog extends Model
 {
+    use \App\Support\TracksDeletion;
+
     protected $table    = 'notifications_log';
     protected $fillable = ['employee_id', 'title', 'body', 'type', 'is_read', 'url'];
     protected $casts    = ['is_read' => 'boolean'];

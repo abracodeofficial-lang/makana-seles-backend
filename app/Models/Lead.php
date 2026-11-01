@@ -3,12 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\{BelongsTo, BelongsToMany, HasMany};
 
 class Lead extends Model
 {
-    use SoftDeletes;
+    use \App\Support\TracksDeletion;
 
     protected $fillable = [
         'lead_code', 'name', 'phone',
@@ -39,9 +38,9 @@ class Lead extends Model
     public const OPERATION_STATUSES = ['يبغى تواصل هاتفي', 'عنده استفسارات أكثر', 'اهتمام مبدئي'];
     public const UPDATE_STATUSES    = ['تم البيع', 'استفسار', 'طلبات بحث', 'اهتمام أولي', 'اهتمام عالي', 'اقتراحات أخرى'];
 
-    public function propertyType(): BelongsTo      { return $this->belongsTo(PropertyType::class); }
-    public function city(): BelongsTo              { return $this->belongsTo(City::class); }
-    public function neighborhood(): BelongsTo      { return $this->belongsTo(Neighborhood::class); }
+    public function propertyType(): BelongsTo      { return $this->belongsTo(PropertyType::class)->withTrashed(); }
+    public function city(): BelongsTo              { return $this->belongsTo(City::class)->withTrashed(); }
+    public function neighborhood(): BelongsTo      { return $this->belongsTo(Neighborhood::class)->withTrashed(); }
     public function paymentMethod(): BelongsTo     { return $this->belongsTo(PaymentMethod::class); }
     public function operationEmployee(): BelongsTo { return $this->belongsTo(Employee::class, 'operation_employee_id'); }
     public function brokerEmployee(): BelongsTo    { return $this->belongsTo(Employee::class, 'broker_employee_id'); }

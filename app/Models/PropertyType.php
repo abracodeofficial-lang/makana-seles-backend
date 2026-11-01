@@ -4,6 +4,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PropertyType extends Model
 {
+    use \App\Support\TracksDeletion;
+
     protected $fillable = ['name', 'is_active'];
     protected $casts    = ['is_active' => 'boolean'];
 

@@ -226,6 +226,7 @@ class BroadcastController extends BaseController
     public function destroyCampaign(Request $request, WaCampaign $campaign): JsonResponse
     {
         $this->authorizeAudience($request, $campaign->audience);
+        if ($campaign->auto_status === 'running') $campaign->update(['auto_status' => 'paused']);
         $campaign->delete();
         return $this->success(null, 'تم حذف الحملة');
     }

@@ -5,9 +5,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Neighborhood extends Model
 {
+    use \App\Support\TracksDeletion;
+
     protected $fillable = ['name', 'city_id'];
 
-    public function city(): BelongsTo { return $this->belongsTo(City::class); }
+    public function city(): BelongsTo { return $this->belongsTo(City::class)->withTrashed(); }
     public function properties(): HasMany { return $this->hasMany(Property::class); }
     public function leads(): HasMany { return $this->hasMany(Lead::class); }
 }

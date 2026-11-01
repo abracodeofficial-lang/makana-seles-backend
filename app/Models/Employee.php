@@ -59,7 +59,7 @@ class Employee extends Authenticatable
     // ============================================================
     public function department(): BelongsTo   { return $this->belongsTo(Department::class); }
     public function contractType(): BelongsTo { return $this->belongsTo(ContractType::class); }
-    public function shift(): BelongsTo        { return $this->belongsTo(Shift::class); }
+    public function shift(): BelongsTo        { return $this->belongsTo(Shift::class)->withTrashed(); }
 
     // ============================================================
     // Relations — HR
@@ -173,6 +173,19 @@ class Employee extends Authenticatable
             ->where('permission_group_pages.page_key', $page)
             ->where("permission_group_pages.{$column}", true)
             ->exists();
+    }
+
+    // الأدمن: عضو بمجموعة "مدير النظام"، أو عنده كل الصلاحيات على كل الصفحات
+    public function isAdmin(): bool
+    {
+        if ($this->permissionGroups()->where('name', 'مدير النظام')->exists()) return true;
+
+        foreach (array_keys(\App\Support\PermissionPages::all()) as $page) {
+            foreach (['view', 'add', 'edit', 'delete', 'export', 'approve'] as $action) {
+                if (!$this->hasPermission($page, $action)) return false;
+            }
+        }
+        return true;
     }
 
     // ============================================================

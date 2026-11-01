@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 // ============================================================
 class LeaveType extends Model
 {
+    use \App\Support\TracksDeletion;
+
     protected $fillable = ['name', 'total_days', 'requires_attachment', 'is_active'];
     protected $casts    = ['requires_attachment' => 'boolean', 'is_active' => 'boolean'];
 

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 // ============================================================
 class Shift extends Model
 {
+    use \App\Support\TracksDeletion;
+
     protected $fillable = ['name', 'start_time', 'end_time', 'late_tolerance_minutes'];
 
     public function employees(): HasMany { return $this->hasMany(Employee::class); }

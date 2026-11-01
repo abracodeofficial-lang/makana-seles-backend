@@ -4,6 +4,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class City extends Model
 {
+    use \App\Support\TracksDeletion;
+
     protected $fillable = ['name', 'code'];
 
     public function neighborhoods(): HasMany

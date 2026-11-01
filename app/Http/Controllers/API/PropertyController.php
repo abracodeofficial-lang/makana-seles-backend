@@ -283,8 +283,7 @@ class PropertyController extends BaseController
     public function deleteDocument(int $id, int $docId): JsonResponse
     {
         $doc = PropertyDocument::where('property_id', $id)->findOrFail($docId);
-        Storage::disk('public')->delete($doc->file_path);
-        $doc->delete();
+        $doc->delete();   // حذف ناعم — الملف بيضل على القرص حتى ينفع الاسترجاع
         return $this->success(null, 'تم حذف المستند');
     }
 }

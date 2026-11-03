@@ -8,6 +8,22 @@ use Illuminate\Http\Request;
 
 class LeaveRequestController extends BaseController
 {
+    // GET /api/leave-requests/export?from=&to= — كل الطلبات اللي بتتقاطع مع الفترة، بدون تقسيم صفحات
+    public function export(Request $request): JsonResponse
+    {
+        $data = $request->validate(['from' => 'required|date', 'to' => 'required|date']);
+
+        $query = LeaveRequest::with(['employee:id,full_name,employee_number', 'leaveType:id,name'])
+            ->whereDate('from_date', '<=', $data['to'])
+            ->whereDate('to_date', '>=', $data['from']);
+
+        if (!$request->user()->hasPermission('leave_requests', 'approve')) {
+            $query->where('employee_id', $request->user()->id);
+        }
+
+        return $this->success($query->orderBy('from_date')->get());
+    }
+
     public function index(Request $request): JsonResponse
     {
         $user  = $request->user();

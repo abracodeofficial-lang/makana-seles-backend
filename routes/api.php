@@ -181,6 +181,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // الإجازات
     Route::prefix('leave-requests')->group(function () {
         Route::get('/',                    [LeaveRequestController::class, 'index']);
+        Route::get('export',               [LeaveRequestController::class, 'export']);
         Route::post('/',                   [LeaveRequestController::class, 'store']);
         Route::patch('{id}/manager-approve',[LeaveRequestController::class, 'managerApprove']);
         Route::patch('{id}/manager-reject', [LeaveRequestController::class, 'managerReject']);

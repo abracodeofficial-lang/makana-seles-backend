@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 // مسارات عامة بدون تسجيل دخول: Feed بيوت (بتوكن) وصور الإعلانات
 class FeedController extends Controller
 {
-    // GET /feeds/bayut.xml?token=
+    // GET /api/feeds/bayut.xml?token=
     public function bayut(Request $request)
     {
         $expected = (string) PublishingSetting::current()->bayut_token;
@@ -20,7 +20,7 @@ class FeedController extends Controller
         return response(BayutFeed::xml(), 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
     }
 
-    // GET /media/property-images/{uuid}
+    // GET /api/media/property-images/{uuid}
     public function image(string $uuid)
     {
         $image = PropertyImage::where('uuid', $uuid)->firstOrFail();

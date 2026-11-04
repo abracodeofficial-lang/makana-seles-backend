@@ -33,6 +33,6 @@ class PublishingSetting extends Model
 
     public function bayutFeedUrl(): string
     {
-        return $this->publicUrl('feeds/bayut.xml?token=' . $this->bayut_token);
+        return $this->publicUrl('api/feeds/bayut.xml?token=' . $this->bayut_token);
     }
 }

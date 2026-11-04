@@ -19,7 +19,7 @@ class PropertyImage extends Model
     // رابط عام بدون تسجيل دخول (ووردبريس وبيوت بينزلوا الصور منه) — بالـ uuid حتى ما ينعدّ بالأرقام
     public function getUrlAttribute(): string
     {
-        return PublishingSetting::current()->publicUrl("media/property-images/{$this->uuid}");
+        return PublishingSetting::current()->publicUrl("api/media/property-images/{$this->uuid}");
     }
 
     protected static function booted(): void

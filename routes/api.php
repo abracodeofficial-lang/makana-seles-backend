@@ -28,6 +28,12 @@ Route::prefix('auth')->group(function () {
 });
 
 // برنامج ربط الواتساب على كمبيوتر المكتب — بمفتاح الجهاز (X-Gateway-Token) مو بتوكن مستخدم
+// مسارات عامة لموديول النشر (Feed بيوت بتوكن، وصور الإعلانات).
+// تحت /api لأن .htaccess السيرفر بيوجّه /api بس لـ Laravel. الصور بدون حد طلبات: بيوت وووردبريس بينزلوها دفعة وحدة.
+Route::get('feeds/bayut.xml', [\App\Http\Controllers\FeedController::class, 'bayut']);
+Route::get('media/property-images/{uuid}', [\App\Http\Controllers\FeedController::class, 'image'])
+    ->whereUuid('uuid')->withoutMiddleware('throttle:api');
+
 Route::prefix('wa-gateway')->middleware('throttle:120,1')->controller(\App\Http\Controllers\API\WaGatewayController::class)->group(function () {
     Route::post('heartbeat', 'heartbeat');
     Route::get('next',       'next');

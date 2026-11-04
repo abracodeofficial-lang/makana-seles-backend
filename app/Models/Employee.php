@@ -188,6 +188,13 @@ class Employee extends Authenticatable
         return true;
     }
 
+    // الناشر (عنده صفحة النشر بدون تعديل العقارات) ما بيعدّل بيانات العقار
+    public function canWriteProperties(): bool
+    {
+        if ($this->isAdmin() || $this->hasPermission('properties', 'edit')) return true;
+        return !$this->hasPermission('publishing', 'view');
+    }
+
     // ============================================================
     // Scopes
     // ============================================================

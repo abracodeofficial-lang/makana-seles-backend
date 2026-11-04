@@ -139,7 +139,7 @@ class PropertyController extends BaseController
     {
         $property = Property::with([
             'owner', 'propertyType', 'marketingType', 'usageType',
-            'city', 'neighborhood', 'documents',
+            'city', 'neighborhood', 'documents', 'images',
             'assignedEmployee:id,full_name,phone',
             'createdBy:id,full_name',
         ])->findOrFail($id);
@@ -150,6 +150,7 @@ class PropertyController extends BaseController
     // POST /api/properties
     public function store(Request $request): JsonResponse
     {
+        abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
         $data = $request->validate([
             // المعلومات الأساسية — الاسم والمالك فقط إلزاميان
             'name'               => 'required|string|max:255',
@@ -177,6 +178,9 @@ class PropertyController extends BaseController
             'facade'             => 'nullable|string|max:100',
             'has_brokerage_contract' => 'nullable|boolean',
             'license_number'     => 'nullable|string|max:50',
+            'ad_license_expiry'  => 'nullable|date',
+            'fal_license_number' => 'nullable|string|max:50',
+            'listing_purpose'    => 'nullable|in:بيع,إيجار',
             'plan_number'        => 'nullable|string|max:50',
             'plot_number'        => 'nullable|string|max:50',
             'map_url'            => 'nullable|url',
@@ -243,7 +247,13 @@ class PropertyController extends BaseController
     // PUT /api/properties/{id}
     public function update(Request $request, int $id): JsonResponse
     {
+        abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
         $property = Property::findOrFail($id);
+        $request->validate([
+            'ad_license_expiry'  => 'nullable|date',
+            'fal_license_number' => 'nullable|string|max:50',
+            'listing_purpose'    => 'nullable|in:بيع,إيجار',
+        ]);
         $property->update($this->fillDefaults($request->except(['property_code', 'created_by'])));
         return $this->success($property->fresh(['owner', 'propertyType', 'city']), 'تم تحديث العقار');
     }
@@ -251,13 +261,72 @@ class PropertyController extends BaseController
     // DELETE /api/properties/{id}
     public function destroy(int $id): JsonResponse
     {
-        Property::findOrFail($id)->delete();
+        abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
+        $property = Property::findOrFail($id);
+        if ($property->publications()->whereIn('status', ['published', 'needs_update', 'queued', 'publishing'])->exists()) {
+            return $this->error('العقار منشور — أوقف نشره أول من صفحة النشر', 422);
+        }
+        $property->delete();
         return $this->success(null, 'تم حذف العقار');
+    }
+
+    // POST /api/properties/{id}/ready — مدخل البيانات: جاهز للنشر
+    public function markReady(Request $request, int $id): JsonResponse
+    {
+        abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
+        $property = Property::findOrFail($id);
+        if (!in_array($property->workflow_status, ['draft', 'returned'], true)) {
+            return $this->error('العقار مُرسل للنشر من قبل', 422);
+        }
+
+        Property::whereKey($id)->update([
+            'workflow_status' => 'ready_for_publish', 'return_note' => null,
+            'ready_at' => now(), 'ready_by' => $request->user()->id,
+        ]);
+
+        app(\App\Services\Publishing\PublicationService::class)->notifyPublishers(
+            'عقار جاهز للنشر', "{$property->name} ({$property->property_code})", 'معلومة', "/publishing/{$id}"
+        );
+
+        return $this->success(null, 'تم تحويل العقار لجاهز للنشر');
+    }
+
+    // POST /api/properties/{id}/images
+    public function uploadImages(Request $request, int $id): JsonResponse
+    {
+        abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
+        $property = Property::findOrFail($id);
+        $request->validate([
+            'images'   => 'required|array|min:1|max:20',
+            'images.*' => 'required|image|mimes:jpg,jpeg,png,webp|max:10240',
+        ], ['images.*.image' => 'الملف لازم يكون صورة', 'images.*.max' => 'حجم الصورة أكبر من 10MB']);
+
+        $next = (int) \App\Models\PropertyImage::where('property_id', $id)->max('sort_order');
+        $saved = [];
+        foreach ($request->file('images') as $file) {
+            $saved[] = \App\Models\PropertyImage::create([
+                'property_id' => $property->id,
+                'file_path'   => $file->store("properties/{$id}/images", 'public'),
+                'file_name'   => $file->getClientOriginalName(),
+                'sort_order'  => ++$next,
+            ]);
+        }
+
+        return $this->success($saved, 'تم رفع الصور', 201);
+    }
+
+    // DELETE /api/properties/{id}/images/{imageId}
+    public function deleteImage(int $id, int $imageId): JsonResponse
+    {
+        abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
+        \App\Models\PropertyImage::where('property_id', $id)->findOrFail($imageId)->delete();
+        return $this->success(null, 'تم حذف الصورة');
     }
 
     // POST /api/properties/{id}/documents
     public function uploadDocument(Request $request, int $id): JsonResponse
     {
+        abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
         $property = Property::findOrFail($id);
 
         $request->validate([
@@ -282,6 +351,7 @@ class PropertyController extends BaseController
     // DELETE /api/properties/{id}/documents/{docId}
     public function deleteDocument(int $id, int $docId): JsonResponse
     {
+        abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
         $doc = PropertyDocument::where('property_id', $id)->findOrFail($docId);
         $doc->delete();   // حذف ناعم — الملف بيضل على القرص حتى ينفع الاسترجاع
         return $this->success(null, 'تم حذف المستند');

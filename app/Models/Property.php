@@ -29,10 +29,13 @@ class Property extends Model
         'photos_url', 'video_url', 'virtual_tour_url', 'photos_count',
         'photo_status', 'design_status', 'video_status', 'marketing_status',
         'assigned_employee_id', 'commission_rate', 'created_by',
+        'ad_license_expiry', 'fal_license_number', 'listing_purpose',
     ];
 
     protected $casts = [
         'is_verified'      => 'boolean',
+        'ad_license_expiry' => 'date:Y-m-d',
+        'ready_at'         => 'datetime',
         'has_brokerage_contract' => 'boolean',
         'is_furnished'     => 'boolean',
         'has_pool'         => 'boolean',
@@ -59,6 +62,8 @@ class Property extends Model
     public function assignedEmployee(): BelongsTo { return $this->belongsTo(Employee::class, 'assigned_employee_id'); }
     public function createdBy(): BelongsTo        { return $this->belongsTo(Employee::class, 'created_by'); }
     public function documents(): HasMany          { return $this->hasMany(PropertyDocument::class); }
+    public function images(): HasMany             { return $this->hasMany(PropertyImage::class)->orderBy('sort_order')->orderBy('id'); }
+    public function publications(): HasMany       { return $this->hasMany(PropertyPublication::class); }
     public function visits(): HasMany             { return $this->hasMany(Visit::class); }
 
     public function getCalculatedPricePerMeterAttribute(): float
@@ -81,7 +86,12 @@ class Property extends Model
 
     protected static function booted(): void
     {
+        static::updated(function (Property $prop) {
+            app(\App\Services\Publishing\PublicationService::class)->propertyChanged($prop);
+        });
+
         static::creating(function (Property $prop) {
+            if (empty($prop->uuid)) $prop->uuid = (string) \Illuminate\Support\Str::uuid();
             if (empty($prop->property_code)) {
                 $year  = now()->year;
                 $prop->property_code = \App\Support\SequentialCode::next(static::class, 'property_code', 'RE-' . $year . '-');

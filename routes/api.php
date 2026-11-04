@@ -83,9 +83,27 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{id}/properties',  [OwnerController::class, 'properties']);
     });
 
+    // موديول النشر (الفحص بالـ Gates بالكنترولر)
+    Route::prefix('publishing')->controller(\App\Http\Controllers\API\PublishingController::class)->group(function () {
+        Route::get('/',                                 'index');
+        Route::get('settings',                          'settings');
+        Route::put('settings',                          'updateSettings');
+        Route::post('settings/regenerate-feed-token',   'regenerateFeedToken');
+        Route::get('properties/{id}',                   'show');
+        Route::post('properties/{id}/publish',          'publish');
+        Route::post('properties/{id}/unpublish',        'unpublish');
+        Route::post('properties/{id}/return',           'returnToEntry');
+        Route::post('properties/{id}/confirm/{platform}', 'confirmManual');
+        Route::get('properties/{id}/pack',              'pack');
+        Route::get('properties/{id}/images-zip',        'imagesZip');
+    });
+
     // العقارات
     Route::prefix('properties')->group(function () {
         Route::get('/',                             [PropertyController::class, 'index']);
+        Route::post('{id}/ready',                   [PropertyController::class, 'markReady']);
+        Route::post('{id}/images',                  [PropertyController::class, 'uploadImages']);
+        Route::delete('{id}/images/{imageId}',      [PropertyController::class, 'deleteImage']);
         Route::post('/',                            [PropertyController::class, 'store']);
         Route::get('export',                        [PropertyController::class, 'export']);
         Route::get('{id}',                          [PropertyController::class, 'show']);

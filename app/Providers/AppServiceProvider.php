@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Support\AuditTrail;
 use App\Support\ColumnDefaults;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -29,6 +30,12 @@ class AppServiceProvider extends ServiceProvider
                 ColumnDefaults::apply($model);
             }
         });
+
+        // موديول النشر: الناشر بينشر وما بيعدّل، مدخل البيانات بيعدّل وما بيوصل للنشر
+        Gate::define('publishing.view',  fn($u) => $u->isAdmin() || $u->hasPermission('publishing', 'view'));
+        Gate::define('publishing.act',   fn($u) => $u->isAdmin() || $u->hasPermission('publishing', 'edit'));
+        Gate::define('publishing.admin', fn($u) => $u->isAdmin());
+        Gate::define('property.write',   fn($u) => $u->canWriteProperties());
 
         // سجل العمليات: كل إضافة/تعديل/حذف/استرجاع (شوف App\Support\AuditTrail)
         foreach (['created', 'updated', 'deleted', 'restored'] as $action) {

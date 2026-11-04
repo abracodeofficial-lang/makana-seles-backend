@@ -13,7 +13,8 @@ class AuditLogController extends BaseController
 {
     // نوع السجل ← [الصفحة، الحقل اللي بيفتح التفاصيل (?open=)]
     private const LINKS = [
-        'Property' => ['/properties', 'id'], 'PropertyDocument' => ['/properties', 'property_id'],
+        'Property' => ['/properties', 'id'], 'PropertyDocument' => ['/properties', 'property_id'], 'PropertyImage' => ['/properties', 'property_id'],
+        'PublishingSetting' => ['/publishing', null],
         'Owner' => ['/owners', 'id'], 'Lead' => ['/leads', 'id'], 'Visit' => ['/leads', 'lead_id'],
         'Employee' => ['/employees', 'id'], 'EmployeeDocument' => ['/employees', 'employee_id'], 'SalaryHistory' => ['/employees', 'employee_id'],
         'Attendance' => ['/attendance', null], 'LeaveRequest' => ['/leaves', null], 'LeaveBalance' => ['/leaves', null], 'AutoLeave' => ['/leaves', null],
@@ -23,7 +24,7 @@ class AuditLogController extends BaseController
 
     // السجل المحذوف رابطه بصفحة المحذوفات
     private const TRASH_TYPES = [
-        'Property' => 'properties', 'Owner' => 'owners', 'Lead' => 'leads', 'PropertyDocument' => 'property_documents',
+        'Property' => 'properties', 'Owner' => 'owners', 'Lead' => 'leads', 'PropertyDocument' => 'property_documents', 'PropertyImage' => 'property_images',
         'EmployeeDocument' => 'employee_documents', 'ContactList' => 'contact_lists', 'WaCampaign' => 'wa_campaigns', 'City' => 'cities',
         'Neighborhood' => 'neighborhoods', 'PropertyType' => 'property_types', 'OperationPropertyTypeAssignment' => 'operation_assignments',
         'Shift' => 'shifts', 'LeaveType' => 'leave_types', 'PermissionDuration' => 'permission_durations', 'PermissionGroup' => 'permission_groups',

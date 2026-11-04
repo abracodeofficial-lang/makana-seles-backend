@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Models\{
-    City, ContactList, Employee, EmployeeDocument, Lead, LeaveType, Neighborhood, NotificationLog,
+    City, ContactList, Employee, EmployeeDocument, Lead, LeaveType, Neighborhood, NotificationLog, PropertyImage,
     OperationPropertyTypeAssignment, Owner, PermissionDuration, PermissionGroup, Property, PropertyDocument,
     PropertyType, Shift, WaCampaign
 };
@@ -25,6 +25,8 @@ class TrashController extends BaseController
             'leads' => ['label' => 'المهتمون', 'model' => Lead::class,
                 'row' => fn($m) => [$m->name ?: 'بدون اسم', $join($m->lead_code, $m->phone)]],
             'property_documents' => ['label' => 'مستندات العقارات', 'model' => PropertyDocument::class,
+                'row' => fn($m) => [$m->file_name, Property::withTrashed()->whereKey($m->property_id)->value('property_code')]],
+            'property_images' => ['label' => 'صور العقارات', 'model' => PropertyImage::class,
                 'row' => fn($m) => [$m->file_name, Property::withTrashed()->whereKey($m->property_id)->value('property_code')]],
             'employee_documents' => ['label' => 'مستندات الموظفين', 'model' => EmployeeDocument::class,
                 'row' => fn($m) => [$m->name ?: $m->file_name, Employee::withTrashed()->whereKey($m->employee_id)->value('full_name')]],

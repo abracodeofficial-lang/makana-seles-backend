@@ -9,6 +9,7 @@ class PermissionPages
     {
         return [
             'properties'     => 'العقارات',
+            'publishing'     => 'النشر',
             'owners'         => 'الملاك',
             'leads'          => 'المهتمون',
             'employees'      => 'الموظفون',

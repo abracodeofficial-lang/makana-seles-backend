@@ -23,15 +23,16 @@ class AuditTrail
         'OperationPropertyTypeAssignment' => 'تخصيص أوبريشن',
         'PermissionGroup' => 'مجموعة صلاحيات', 'PermissionGroupPage' => 'صلاحيات صفحة', 'EmployeePermissionOverride' => 'استثناء صلاحية',
         'ContactList' => 'قائمة أرقام', 'WaCampaign' => 'حملة واتساب',
+        'PropertyImage' => 'صورة عقار', 'PublishingSetting' => 'إعدادات النشر',
     ];
 
     // ضجيج أو تفاصيل تقنية — ما بتتسجل
     private const SKIPPED = [
-        'AuditLog', 'NotificationLog', 'PushSubscription', 'WaCampaignRecipient', 'ContactListMember', 'WaGatewaySetting', 'User',
+        'AuditLog', 'NotificationLog', 'PushSubscription', 'WaCampaignRecipient', 'ContactListMember', 'WaGatewaySetting', 'User', 'PropertyPublication', 'PublicationLog',
     ];
 
-    private const IGNORED_FIELDS = ['id', 'created_at', 'updated_at', 'deleted_at', 'deleted_by', 'created_by', 'remember_token'];
-    private const SECRET_FIELDS  = ['password', 'token'];
+    private const IGNORED_FIELDS = ['id', 'created_at', 'updated_at', 'deleted_at', 'deleted_by', 'created_by', 'remember_token', 'uuid', 'ready_at', 'ready_by', 'sort_order'];
+    private const SECRET_FIELDS  = ['password', 'token', 'wordpress_app_password', 'bayut_token'];
 
     private const LABELS = [
         'name' => 'الاسم', 'full_name' => 'الاسم', 'title' => 'العنوان', 'phone' => 'الهاتف', 'whatsapp' => 'الواتساب', 'email' => 'البريد',
@@ -74,7 +75,9 @@ class AuditTrail
         'occupancy_allowance' => 'بدل الإشغال', 'is_approved' => 'معتمد', 'approved_by' => 'اعتمده', 'overtime_multiplier' => 'معامل الإضافي', 'deduction_after_late_days' => 'الخصم بعد أيام تأخير',
         'weekend_days' => 'أيام العطلة', 'year' => 'السنة', 'used_days' => 'الأيام المستخدمة', 'last_leave_date' => 'آخر إجازة', 'request_number' => 'رقم الطلب', 'attachment_path' => 'المرفق',
         'manager_notes' => 'ملاحظات المدير', 'manager_decision_at' => 'وقت قرار المدير', 'hr_notes' => 'ملاحظات الموارد البشرية', 'hr_decision_at' => 'وقت قرار الموارد البشرية',
-        'request_datetime' => 'وقت الطلب', 'note' => 'ملاحظة', 'file_path' => 'الملف', 'effective_date' => 'تاريخ السريان', 'min_delay' => 'أقل فاصل', 'max_delay' => 'أعلى فاصل', 'next_send_at' => 'الإرسال التالي',
+        'request_datetime' => 'وقت الطلب', 'note' => 'ملاحظة', 'file_path' => 'الملف', 'ad_license_expiry' => 'انتهاء رخصة الإعلان', 'fal_license_number' => 'رخصة فال', 'listing_purpose' => 'بيع/إيجار',
+        'workflow_status' => 'حالة النشر', 'return_note' => 'ملاحظة الإرجاع', 'public_base_url' => 'رابط النظام العام', 'wordpress_base_url' => 'رابط ووردبريس',
+        'wordpress_username' => 'مستخدم ووردبريس', 'wordpress_app_password' => 'كلمة مرور ووردبريس', 'wordpress_mock' => 'الوضع التجريبي', 'bayut_token' => 'توكن بيوت', 'effective_date' => 'تاريخ السريان', 'min_delay' => 'أقل فاصل', 'max_delay' => 'أعلى فاصل', 'next_send_at' => 'الإرسال التالي',
     ];
 
     // الحقول المرجعية: منخزّن الاسم مش الرقم

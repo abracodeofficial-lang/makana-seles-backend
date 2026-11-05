@@ -49,6 +49,7 @@ class PropertyController extends BaseController
         if ($request->search)       $query->where(function($q) use ($request) {
             $q->where('name', 'like', "%{$request->search}%")
               ->orWhere('property_code', 'like', "%{$request->search}%")
+              ->orWhere('trial_property_code', 'like', "%{$request->search}%")
               ->orWhere('license_number', 'like', "%{$request->search}%")
               ->orWhere('plan_number', 'like', "%{$request->search}%")
               ->orWhere('plot_number', 'like', "%{$request->search}%")
@@ -70,7 +71,7 @@ class PropertyController extends BaseController
         if ($request->filled('has_brokerage_contract')) $query->where('has_brokerage_contract', (bool) $request->has_brokerage_contract);
         if ($request->price_min)         $query->where('listed_price', '>=', $request->price_min);
         if ($request->price_max)         $query->where('listed_price', '<=', $request->price_max);
-        if ($request->code)              $query->where('property_code', 'like', "%{$request->code}%");
+        if ($request->code)              $query->where(fn($q) => $q->where('property_code', 'like', "%{$request->code}%")->orWhere('trial_property_code', 'like', "%{$request->code}%"));
         // فئة السعر: أقل من 4 مليون / بين 4 و10 / أعلى من 10
         match ($request->price_range) {
             'lt4'   => $query->where('listed_price', '<', 4_000_000),
@@ -165,6 +166,7 @@ class PropertyController extends BaseController
         $data = $request->validate([
             // المعلومات الأساسية — الاسم والمالك فقط إلزاميان
             'name'               => 'required|string|max:255',
+            'trial_property_code' => 'nullable|string|max:50',
             'property_type_id'   => 'required|exists:property_types,id',
             'marketing_type_id'  => 'nullable|exists:marketing_types,id',
             'usage_type_id'      => 'nullable|exists:usage_types,id',
@@ -263,6 +265,7 @@ class PropertyController extends BaseController
         $property = Property::findOrFail($id);
         $request->validate([
             'total_area_text'    => 'nullable|string|max:50',
+            'trial_property_code' => 'nullable|string|max:50',
             'ad_license_expiry'  => 'nullable|date',
             'fal_license_number' => 'nullable|string|max:50',
             'listing_purpose'    => 'nullable|in:بيع,إيجار',

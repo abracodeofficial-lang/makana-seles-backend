@@ -10,7 +10,7 @@ class Property extends Model
     use \App\Support\TracksDeletion;
 
     protected $fillable = [
-        'property_code', 'name', 'property_type_id', 'marketing_type_id',
+        'property_code', 'trial_property_code', 'name', 'property_type_id', 'marketing_type_id',
         'usage_type_id', 'status', 'is_verified', 'source',
         'listed_price', 'net_price', 'price_per_meter', 'market_price_3months',
         'market_price_note', 'discount_amount',

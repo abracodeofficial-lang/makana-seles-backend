@@ -40,7 +40,7 @@ class AuditTrail
         'type' => 'النوع', 'code' => 'الكود', 'is_active' => 'مفعّل', 'reason' => 'السبب', 'message' => 'الرسالة', 'location' => 'الموقع',
         'property_code' => 'كود العقار', 'property_type_id' => 'نوع العقار', 'marketing_type_id' => 'نوع التسويق', 'usage_type_id' => 'الاستخدام',
         'is_verified' => 'محقق', 'listed_price' => 'السعر المعروض', 'net_price' => 'السعر الصافي', 'price_per_meter' => 'سعر المتر',
-        'discount_amount' => 'الخصم', 'total_area' => 'المساحة (رقم)', 'total_area_text' => 'المساحة','land_area' => 'مساحة الأرض', 'building_area' => 'مساحة البناء',
+        'discount_amount' => 'الخصم', 'trial_property_code' => 'كود عقار تجريبي', 'total_area' => 'المساحة (رقم)', 'total_area_text' => 'المساحة','land_area' => 'مساحة الأرض', 'building_area' => 'مساحة البناء',
         'city_id' => 'المدينة', 'neighborhood_id' => 'الحي', 'street' => 'عرض الشارع', 'street_width' => 'عرض الشارع', 'building_number' => 'رقم المبنى',
         'postal_code' => 'الرمز البريدي', 'has_brokerage_contract' => 'عقد وساطة', 'license_number' => 'رقم الترخيص', 'plan_number' => 'رقم المخطط',
         'plot_number' => 'رقم القطعة', 'direction' => 'الاتجاه', 'facade' => 'الواجهة', 'owner_id' => 'المالك', 'features' => 'الميزات', 'components' => 'المكونات',

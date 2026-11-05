@@ -116,6 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('{id}',                          [PropertyController::class, 'update']);
         Route::delete('{id}',                       [PropertyController::class, 'destroy']);
         Route::post('{id}/documents',               [PropertyController::class, 'uploadDocument']);
+        Route::get('{id}/documents/{docId}/file',   [PropertyController::class, 'documentFile']);
         Route::delete('{id}/documents/{docId}',     [PropertyController::class, 'deleteDocument']);
     });
 

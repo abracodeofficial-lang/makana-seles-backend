@@ -342,10 +342,20 @@ class PropertyController extends BaseController
         abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
         $property = Property::findOrFail($id);
 
+        // ملف المشروع: PDF وصور بس — فحص الامتداد ومحتوى الملف الفعلي مع بعض
+        $fileRule = $request->type === PropertyDocument::PROJECT_FILE
+            ? 'required|file|extensions:pdf,jpg,jpeg,png,webp|mimes:pdf,jpg,jpeg,png,webp|max:20480'
+            : 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240';
+
         $request->validate([
-            'file' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
-            'type' => 'required|in:صك,رخصة بناء,مخططات,أخرى',
+            'file' => $fileRule,
+            'type' => 'required|in:صك,رخصة بناء,مخططات,أخرى,' . PropertyDocument::PROJECT_FILE,
             'note' => 'nullable|string',
+        ], [
+            'file.extensions' => 'مسموح PDF وصور (JPG, PNG, WEBP) بس',
+            'file.mimes'      => 'مسموح PDF وصور (JPG, PNG, WEBP) بس',
+            'file.max'        => 'حجم الملف أكبر من الحد المسموح',
+            'file.uploaded'   => 'تعذّر رفع الملف، ممكن حجمه أكبر من المسموح على السيرفر',
         ]);
 
         $file     = $request->file('file');
@@ -359,6 +369,15 @@ class PropertyController extends BaseController
         ]);
 
         return $this->success($document, 'تم رفع المستند بنجاح', 201);
+    }
+
+    // GET /api/properties/{id}/documents/{docId}/file — فتح الملف لمسجلي الدخول
+    public function documentFile(int $id, int $docId)
+    {
+        $doc = PropertyDocument::where('property_id', $id)->findOrFail($docId);
+        abort_unless(Storage::disk('public')->exists($doc->file_path), 404, 'الملف مش موجود');
+
+        return response()->file(Storage::disk('public')->path($doc->file_path), ['X-Content-Type-Options' => 'nosniff']);
     }
 
     // DELETE /api/properties/{id}/documents/{docId}

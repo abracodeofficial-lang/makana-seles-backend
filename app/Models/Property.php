@@ -14,7 +14,7 @@ class Property extends Model
         'usage_type_id', 'status', 'is_verified', 'source',
         'listed_price', 'net_price', 'price_per_meter', 'market_price_3months',
         'market_price_note', 'discount_amount',
-        'total_area', 'land_area', 'building_area',
+        'total_area', 'total_area_text', 'land_area', 'building_area',
         'city_id', 'neighborhood_id', 'street', 'building_number', 'postal_code',
         'has_brokerage_contract', 'license_number', 'plan_number', 'plot_number',
         'direction', 'facade', 'map_url', 'latitude', 'longitude', 'nearby_places',
@@ -66,6 +66,28 @@ class Property extends Model
     public function publications(): HasMany       { return $this->hasMany(PropertyPublication::class); }
     public function visits(): HasMany             { return $this->hasMany(Visit::class); }
 
+    // الرقم من نص المساحة الحر: 565,56 / 1,500.5 / 205.92 — أي صيغة تانية (زي 92: 205) بترجع 0 بدل ما نخمّن
+    public static function parseArea(?string $text): float
+    {
+        $s = strtr(trim((string) $text), [
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            '٫' => '.', '٬' => ',', '،' => ',',
+        ]);
+        $s = trim(preg_replace('/\s*(م²|م2|متر|م)$/u', '', $s));
+
+        if (preg_match('/^\d+,\d{1,2}$/', $s)) {
+            $s = str_replace(',', '.', $s);
+        } elseif (preg_match('/^\d{1,3}(,\d{3})+(\.\d+)?$/', $s)) {
+            $s = str_replace(',', '', $s);
+        } elseif (!preg_match('/^\d+(\.\d+)?$/', $s)) {
+            return 0;
+        }
+
+        $value = (float) $s;
+        return $value < 100_000_000 ? $value : 0; // حد عمود decimal(10,2)
+    }
+
     public function getCalculatedPricePerMeterAttribute(): float
     {
         if (!$this->total_area || $this->total_area == 0) return 0;
@@ -102,9 +124,7 @@ class Property extends Model
         });
 
         static::updating(function (Property $prop) {
-            if ($prop->total_area > 0) {
-                $prop->price_per_meter = round($prop->listed_price / $prop->total_area, 2);
-            }
+            $prop->price_per_meter = $prop->total_area > 0 ? round($prop->listed_price / $prop->total_area, 2) : 0;
         });
     }
 }

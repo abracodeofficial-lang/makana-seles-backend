@@ -24,6 +24,7 @@ abstract class BasePublisher implements PlatformPublisher
         elseif ($property->ad_license_expiry->toDateString() < $today) $missing[] = 'رخصة الإعلان منتهية';
         if (!$property->fal_license_number) $missing[] = 'رقم رخصة فال';
         if ((float) $property->listed_price <= 0) $missing[] = 'السعر';
+        if ((float) $property->total_area <= 0) $missing[] = 'المساحة كرقم (مثل 565,56)';
         if (!$property->property_type_id)   $missing[] = 'نوع العقار';
         if (!$property->listing_purpose)    $missing[] = 'بيع أو إيجار';
         if (!$property->city_id)            $missing[] = 'المدينة';

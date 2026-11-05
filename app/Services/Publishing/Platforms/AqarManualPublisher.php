@@ -44,7 +44,7 @@ class AqarManualPublisher extends BasePublisher
             'النوع'     => $d['type'],
             'الغرض'     => $d['purpose'],
             'السعر'     => "$money ريال",
-            'المساحة'   => $d['area'] ? number_format($d['area'], 2) . ' م²' : null,
+            'المساحة'   => $property->total_area_text ? "{$property->total_area_text} م²" : ($d['area'] ? number_format($d['area'], 2) . ' م²' : null),
             'المدينة'   => $d['city'],
             'الحي'      => $d['neighborhood'],
             'الواجهة'   => $d['facade'],

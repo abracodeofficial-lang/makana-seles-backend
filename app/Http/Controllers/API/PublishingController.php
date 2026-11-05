@@ -102,7 +102,7 @@ class PublishingController extends BaseController
             ]);
 
         return $this->success([
-            'property'  => $property->only(['id', 'name', 'property_code', 'listed_price', 'total_area', 'listing_purpose', 'license_number', 'ad_license_expiry', 'fal_license_number', 'workflow_status', 'return_note', 'latitude', 'longitude', 'description'])
+            'property'  => $property->only(['id', 'name', 'property_code', 'listed_price', 'total_area', 'total_area_text', 'listing_purpose', 'license_number', 'ad_license_expiry', 'fal_license_number', 'workflow_status', 'return_note', 'latitude', 'longitude', 'description'])
                 + ['type' => $property->propertyType?->name, 'city' => $property->city?->name, 'neighborhood' => $property->neighborhood?->name,
                    'entered_by' => $property->createdBy?->full_name, 'images' => $property->images],
             'platforms' => $platforms,

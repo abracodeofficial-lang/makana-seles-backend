@@ -33,6 +33,17 @@ class PropertyController extends BaseController
         return $data;
     }
 
+    // النص الحر هو المصدر، والرقم بينحسب منه. طلب بالرقم بس (تبويب قديم مفتوح) بيلغي النص القديم
+    private function resolveArea(array $data): array
+    {
+        if (array_key_exists('total_area_text', $data)) {
+            $data['total_area'] = Property::parseArea($data['total_area_text']);
+        } elseif (array_key_exists('total_area', $data)) {
+            $data['total_area_text'] = null;
+        }
+        return $data;
+    }
+
     private function applyFilters($query, Request $request)
     {
         if ($request->search)       $query->where(function($q) use ($request) {
@@ -167,7 +178,8 @@ class PropertyController extends BaseController
             'discount_amount'        => 'nullable|numeric|min:0',
             // المساحة
             'total_area'         => 'nullable|numeric|min:0',
-            'land_area'          => 'nullable|numeric',
+            'total_area_text'    => 'nullable|string|max:50',
+            'land_area'         => 'nullable|numeric',
             'building_area'      => 'nullable|numeric',
             // الموقع
             'city_id'            => 'nullable|exists:cities,id',
@@ -229,7 +241,7 @@ class PropertyController extends BaseController
             'commission_rate'    => 'nullable|numeric|min:0|max:100',
         ]);
 
-        $data = $this->fillDefaults($data);
+        $data = $this->fillDefaults($this->resolveArea($data));
         $data['created_by'] = $request->user()->id;
         $property = Property::create($data);
 
@@ -250,11 +262,12 @@ class PropertyController extends BaseController
         abort_unless(\Illuminate\Support\Facades\Gate::allows('property.write'), 403, 'ليس لديك صلاحية لتعديل العقارات');
         $property = Property::findOrFail($id);
         $request->validate([
+            'total_area_text'    => 'nullable|string|max:50',
             'ad_license_expiry'  => 'nullable|date',
             'fal_license_number' => 'nullable|string|max:50',
             'listing_purpose'    => 'nullable|in:بيع,إيجار',
         ]);
-        $property->update($this->fillDefaults($request->except(['property_code', 'created_by'])));
+        $property->update($this->fillDefaults($this->resolveArea($request->except(['property_code', 'created_by']))));
         return $this->success($property->fresh(['owner', 'propertyType', 'city']), 'تم تحديث العقار');
     }
 

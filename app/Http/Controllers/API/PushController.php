@@ -21,6 +21,10 @@ class PushController extends BaseController
             'cron_status'        => Storage::disk('local')->exists('webpush/cron-status.txt')
                 ? trim(Storage::disk('local')->get('webpush/cron-status.txt'))
                 : null,
+            // نتيجة php artisan mail:check — بتتحدث مع كل نشر
+            'mail_status'        => Storage::disk('local')->exists('webpush/mail-status.txt')
+                ? trim(Storage::disk('local')->get('webpush/mail-status.txt'))
+                : null,
         ]);
     }
 

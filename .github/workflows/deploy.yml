@@ -31,16 +31,25 @@ jobs:
 
       - name: Run composer install + migrate + clear caches
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          # إعدادات البريد من أسرار الريبو (اختيارية) — بتنكتب بـ .env عالسيرفر
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          MAIL_ENCRYPTION: ${{ secrets.MAIL_ENCRYPTION }}
         with:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: MAIL_USERNAME,MAIL_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_ENCRYPTION
           script: |
             set -e
             cd ${{ secrets.BACKEND_PATH }}
             composer install --no-dev --optimize-autoloader
             composer dump-autoload --no-dev --optimize
+            php tools/set-mail-env.php
             php artisan config:clear
             php artisan cache:clear
             php artisan migrate --force
@@ -57,3 +66,5 @@ jobs:
             mkdir -p storage/app/webpush
             { date -u +%FT%TZ; command -v crontab || echo "no-crontab-binary"; crontab -l 2>&1 | grep -c "artisan schedule:run" || true; } > storage/app/webpush/cron-status.txt 2>&1
             php artisan attendance:shift-reminders || echo "WARNING: shift reminders command failed"
+            # فحص اتصال البريد — النتيجة بتنعرض بـ /api/push/public-key (mail_status)
+            php artisan mail:check || echo "WARNING: mail check command failed"

@@ -14,7 +14,7 @@ class Employee extends Authenticatable
     use HasApiTokens, Notifiable, SoftDeletes;
 
     protected $fillable = [
-        'employee_number', 'full_name', 'national_id', 'phone', 'email',
+        'employee_number', 'full_name', 'national_id', 'phone', 'whatsapp', 'email',
         'password', 'address', 'marital_status', 'status',
         'department_id', 'job_title', 'contract_type_id', 'shift_id', 'hire_date',
         'basic_salary', 'housing_allowance', 'transport_allowance',
@@ -22,6 +22,18 @@ class Employee extends Authenticatable
     ];
 
     protected $hidden = ['password', 'remember_token'];
+
+    // صيغة موحّدة للأرقام: بدون مسافات، و 00 بالأول بتصير +
+    public static function cleanPhone(?string $phone): ?string
+    {
+        if ($phone === null) return null;
+        $p = preg_replace('/[\s\-()]/', '', trim($phone));
+        if (str_starts_with($p, '00')) $p = '+' . substr($p, 2);
+        return $p === '' ? null : $p;
+    }
+
+    public function setPhoneAttribute($value): void    { $this->attributes['phone'] = self::cleanPhone($value); }
+    public function setWhatsappAttribute($value): void { $this->attributes['whatsapp'] = self::cleanPhone($value); }
 
     protected $casts = [
         'hire_date'    => 'date',

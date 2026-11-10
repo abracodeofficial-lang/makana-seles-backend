@@ -79,7 +79,7 @@ class AuthController extends BaseController
         if ($employee->status !== 'نشط') {
             return $this->error('الحساب موقوف، تواصل مع الإدارة', 422);
         }
-        $phone = BroadcastController::normalizePhone($employee->phone);
+        $phone = BroadcastController::normalizePhone($employee->whatsapp ?: $employee->phone);
         if (strlen($phone) < 11) {
             return $this->error('ما في رقم جوال صحيح مسجل لحسابك، تواصل مع الإدارة', 422);
         }

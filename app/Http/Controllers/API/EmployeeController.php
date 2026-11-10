@@ -61,7 +61,9 @@ class EmployeeController extends BaseController
     // POST /api/employees  — 3 خطوات لكنها request واحد
     public function store(Request $request): JsonResponse
     {
+        $this->cleanPhones($request);
         $data = $request->validate([
+            'whatsapp'        => 'nullable|string|max:30',
             // خطوة 1 — مطلوبة
             'full_name'       => 'required|string|max:255',
             'national_id'     => 'required|string|unique:employees',
@@ -136,6 +138,7 @@ class EmployeeController extends BaseController
             $data[$field] = $data[$field] ?? 0;
         }
 
+        $data['whatsapp'] = ($data['whatsapp'] ?? null) ?: $data['phone']; // فاضي = نفس رقم الهاتف
         $employee = Employee::create($data);
 
         // تعيين مجموعة الصلاحيات
@@ -164,7 +167,9 @@ class EmployeeController extends BaseController
     {
         $employee = Employee::findOrFail($id);
 
+        $this->cleanPhones($request);
         $data = $request->validate([
+            'whatsapp'         => 'nullable|string|max:30',
             // مطلوبة دائماً
             'full_name'        => 'required|string|max:255',
             'phone'            => 'required|string|unique:employees,phone,' . $id,
@@ -381,6 +386,14 @@ class EmployeeController extends BaseController
                 ['employee_id' => $employeeId, 'leave_type_id' => $lt->id, 'year' => now()->year],
                 ['total_days' => $lt->total_days, 'used_days' => 0]
             );
+        }
+    }
+
+    // نفس صيغة الحفظ قبل فحص "رقم مكرر" (0020… و +20… نفس الرقم)
+    private function cleanPhones(Request $request): void
+    {
+        foreach (['phone', 'whatsapp'] as $key) {
+            if ($request->has($key)) $request->merge([$key => Employee::cleanPhone($request->input($key))]);
         }
     }
 

@@ -259,9 +259,12 @@ class BroadcastController extends BaseController
     // 0501234567 / 501234567 / 00966... / +966... → 966501234567 (نفس منطق waPhone بالفرونت)
     public static function normalizePhone(?string $phone): string
     {
-        $d = preg_replace('/\D/', '', (string) $phone);
+        $raw = trim((string) $phone);
+        $d   = preg_replace('/\D/', '', $raw);
         if ($d === '') return '';
-        if (str_starts_with($d, '00'))  $d = substr($d, 2);
+        // + أو 00 = رقم دولي فيه رمز الدولة، بينبعت زي ما هو (كان بينضافله 966 بالغلط)
+        if (str_starts_with($raw, '+'))  return $d;
+        if (str_starts_with($d, '00'))   return substr($d, 2);
         if (str_starts_with($d, '966')) return $d;
         if (str_starts_with($d, '0'))   return '966' . substr($d, 1);
         return '966' . $d;

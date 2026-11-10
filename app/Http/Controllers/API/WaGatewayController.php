@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Models\WaCampaign;
 use App\Models\WaCampaignRecipient;
 use App\Models\WaGatewaySetting;
+use App\Models\WaOutbox;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,6 +59,9 @@ class WaGatewayController extends BaseController
     {
         $settings = $this->authorizeDevice($request);
         $now = Carbon::now($this->tz());
+
+        // الرسائل الفورية (أكواد الاستعادة) أول — بدون إيقاف/ساعات عمل/حد يومي
+        if ($urgent = $this->nextOutbox()) return response()->json(['status' => true, 'job' => $urgent, 'reason' => null]);
 
         if ($settings->paused) return $this->idle('الإرسال موقوف من الإعدادات');
 
@@ -113,12 +117,45 @@ class WaGatewayController extends BaseController
             'error' => 'nullable|string|max:255',
         ]);
 
+        // id سالب = رسالة فورية من wa_outbox (البرنامج بيرجّع الـ id متل ما استلمه)
+        if ($data['id'] < 0) {
+            WaOutbox::findOrFail(-$data['id'])->update($data['ok']
+                ? ['status' => 'sent', 'sent_at' => now(), 'error' => null]
+                : ['status' => 'failed', 'error' => $data['error'] ?: 'تعذّر الإرسال']);
+            return response()->json(['status' => true]);
+        }
+
         $recipient = WaCampaignRecipient::findOrFail($data['id']);
         $recipient->update($data['ok']
             ? ['status' => 'sent', 'sent_at' => now(), 'error' => null, 'via' => 'auto']
             : ['status' => 'failed', 'error' => $data['error'] ?: 'تعذّر الإرسال']);
 
         return response()->json(['status' => true]);
+    }
+
+    private function nextOutbox(): ?array
+    {
+        WaOutbox::where('status', 'sending')
+            ->where('updated_at', '<', now()->subMinutes(self::STALE_SENDING_MINUTES))
+            ->update(['status' => 'pending']);
+        WaOutbox::where('status', 'pending')->whereNotNull('expires_at')->where('expires_at', '<=', now())
+            ->update(['status' => 'failed', 'error' => 'انتهت صلاحيتها قبل الإرسال']);
+
+        return DB::transaction(function () {
+            $msg = WaOutbox::where('status', 'pending')->orderBy('id')->lockForUpdate()->first();
+            if (!$msg) return null;
+            $msg->update(['status' => 'sending']);
+            return ['id' => -$msg->id, 'phone' => $msg->phone, 'text' => $msg->message];
+        });
+    }
+
+    // برنامج المكتب شغال ومتصل بالواتساب هلق؟
+    public static function isConnected(): bool
+    {
+        $state = Cache::get(self::STATE_KEY, []);
+        return ($state['status'] ?? null) === 'connected'
+            && isset($state['last_seen'])
+            && Carbon::parse($state['last_seen'])->gt(now()->subSeconds(self::ONLINE_SECONDS));
     }
 
     private function idle(string $reason): JsonResponse

@@ -4,11 +4,12 @@ namespace App\Http\Controllers\API;
 
 use App\Models\Employee;
 use App\Models\NotificationLog;
+use App\Models\WaOutbox;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends BaseController
@@ -51,7 +52,12 @@ class AuthController extends BaseController
         ], 'تم تسجيل الدخول بنجاح');
     }
 
-    // POST /api/auth/forgot-password — بيفحص الإيميل وبيعطي رسالة واضحة لكل حالة
+    // استعادة كلمة المرور بكود على واتساب الموظف (عبر برنامج الواتساب بالمكتب — بدون تكلفة)
+    private const RESET_CODE_MINUTES  = 10;
+    private const RESET_MAX_ATTEMPTS  = 5;
+    private const RESET_RESEND_SECONDS = 60;
+
+    // POST /api/auth/forgot-password {email} — بيفحص الإيميل وبيبعت كود على واتساب الرقم المسجل
     public function forgotPassword(Request $request): JsonResponse
     {
         $request->validate(['email' => 'required|email'], [
@@ -73,52 +79,95 @@ class AuthController extends BaseController
         if ($employee->status !== 'نشط') {
             return $this->error('الحساب موقوف، تواصل مع الإدارة', 422);
         }
-
-        $broker = Password::broker('employees');
-        if ($broker->getRepository()->recentlyCreatedToken($employee)) {
-            return $this->error('بعتنالك رابط قبل أقل من دقيقة، شيك على إيميلك أو جرّب بعد دقيقة', 429);
+        $phone = BroadcastController::normalizePhone($employee->phone);
+        if (strlen($phone) < 11) {
+            return $this->error('ما في رقم جوال صحيح مسجل لحسابك، تواصل مع الإدارة', 422);
         }
 
-        $token = $broker->createToken($employee);
-        try {
-            Mail::to($employee->email)->send(new \App\Mail\ResetPasswordMail($employee, $token));
-        } catch (\Throwable $e) {
-            report($e);
-            $broker->deleteToken($employee); // حتى ما تنحسب محاولة ناجحة وتنقفل إعادة المحاولة
-            return $this->error('تعذّر إرسال الإيميل حالياً، تواصل مع الإدارة', 503);
+        $existing = DB::table('password_reset_tokens')->where('email', $employee->email)->first();
+        if ($existing && now()->diffInSeconds($existing->created_at) < self::RESET_RESEND_SECONDS) {
+            $wait = self::RESET_RESEND_SECONDS - now()->diffInSeconds($existing->created_at);
+            return $this->error("بعتنالك كود قبل شوي، استنى {$wait} ثانية قبل ما تطلب كود جديد", 429);
         }
 
-        return $this->success(['email' => $employee->email], 'بعتنالك رابط تعيين كلمة المرور على إيميلك');
+        if (!WaGatewayController::isConnected()) {
+            return $this->error('خدمة الواتساب غير متصلة حالياً، تواصل مع الإدارة', 503);
+        }
+
+        $code = (string) random_int(100000, 999999);
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $employee->email],
+            ['token' => Hash::make($code), 'created_at' => now()]
+        );
+        Cache::forget($this->resetAttemptsKey($employee->email));
+
+        // كود قديم لسا ما انبعت ما في داعي يوصل
+        WaOutbox::where('phone', $phone)->where('purpose', 'password_reset')->where('status', 'pending')
+            ->update(['status' => 'failed', 'error' => 'انطلب كود أحدث']);
+        WaOutbox::create([
+            'phone'      => $phone,
+            'purpose'    => 'password_reset',
+            'expires_at' => now()->addMinutes(self::RESET_CODE_MINUTES),
+            'message'    => "🔐 نظام الإدارة — مكانة\n\nكود استعادة كلمة المرور: *{$code}*\n\nصالح لمدة " . self::RESET_CODE_MINUTES . " دقائق. لا تشاركه مع أي حدا.\nإذا ما طلبت الكود تجاهل الرسالة.",
+        ]);
+
+        return $this->success([
+            'phone'          => '…' . substr($phone, -4),
+            'expires_in'     => self::RESET_CODE_MINUTES * 60,
+            'resend_after'   => self::RESET_RESEND_SECONDS,
+        ], 'بعتنالك كود على الواتساب');
     }
 
-    // POST /api/auth/reset-password
+    // POST /api/auth/reset-password {email, code, password, password_confirmation}
     public function resetPassword(Request $request): JsonResponse
     {
         $request->validate([
-            'token'    => 'required|string',
             'email'    => 'required|email',
+            'code'     => 'required|digits:6',
             'password' => 'required|string|min:8|confirmed',
         ], [
+            'code.required'      => 'اكتب الكود اللي وصلك',
+            'code.digits'        => 'الكود 6 أرقام',
+            'password.required'  => 'اكتب كلمة المرور الجديدة',
             'password.min'       => 'كلمة المرور لازم تكون 8 أحرف على الأقل',
             'password.confirmed' => 'تأكيد كلمة المرور مش مطابق',
         ]);
 
-        $inactive = false;
-        $status = Password::broker('employees')->reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (Employee $employee, string $password) use (&$inactive) {
-                if ($employee->status !== 'نشط') { $inactive = true; return; }
-                $employee->forceFill(['password' => Hash::make($password)])->save();
-                $employee->tokens()->delete(); // تسجيل خروج من كل الأجهزة
-            }
-        );
-
-        if ($inactive) return $this->error('الحساب موقوف، تواصل مع الإدارة', 403);
-        if ($status !== Password::PASSWORD_RESET) {
-            return $this->error('الرابط غير صالح أو انتهت صلاحيته، اطلب رابط جديد', 422);
+        $email = trim($request->email);
+        $row   = DB::table('password_reset_tokens')->where('email', $email)->first();
+        if (!$row || now()->diffInMinutes($row->created_at) >= self::RESET_CODE_MINUTES) {
+            return $this->error('الكود منتهي، اطلب كود جديد', 422);
         }
 
+        $attemptsKey = $this->resetAttemptsKey($email);
+        if (!Hash::check($request->code, $row->token)) {
+            $attempts = Cache::increment($attemptsKey);
+            Cache::put($attemptsKey, $attempts, now()->addMinutes(self::RESET_CODE_MINUTES));
+            if ($attempts >= self::RESET_MAX_ATTEMPTS) {
+                DB::table('password_reset_tokens')->where('email', $email)->delete();
+                Cache::forget($attemptsKey);
+                return $this->error('الكود غلط وخلصت المحاولات، اطلب كود جديد', 422);
+            }
+            $left = self::RESET_MAX_ATTEMPTS - $attempts;
+            return $this->error("الكود غلط، باقيلك {$left} محاولات", 422);
+        }
+
+        $employee = Employee::where('email', $email)->first();
+        if (!$employee || $employee->status !== 'نشط') {
+            return $this->error('الحساب موقوف، تواصل مع الإدارة', 422);
+        }
+
+        $employee->forceFill(['password' => Hash::make($request->password)])->save();
+        $employee->tokens()->delete(); // تسجيل خروج من كل الأجهزة
+        DB::table('password_reset_tokens')->where('email', $email)->delete();
+        Cache::forget($attemptsKey);
+
         return $this->success(null, 'تم تغيير كلمة المرور، سجّل دخولك');
+    }
+
+    private function resetAttemptsKey(string $email): string
+    {
+        return 'reset-attempts:' . strtolower($email);
     }
 
     // POST /api/auth/logout

@@ -51,34 +51,44 @@ class AuthController extends BaseController
         ], 'تم تسجيل الدخول بنجاح');
     }
 
-    // POST /api/auth/forgot-password — نفس الرد سواء الإيميل مسجل أو لا، حتى ما ينكشف مين موظف
+    // POST /api/auth/forgot-password — بيفحص الإيميل وبيعطي رسالة واضحة لكل حالة
     public function forgotPassword(Request $request): JsonResponse
     {
-        $request->validate(['email' => 'required|email']);
+        $request->validate(['email' => 'required|email'], [
+            'email.required' => 'اكتب البريد الإلكتروني',
+            'email.email'    => 'صيغة البريد الإلكتروني غير صحيحة',
+        ]);
 
+        // حد الطلبات لكل جهاز — بيحمي من تجربة إيميلات كتير لمعرفة مين موظف
         $key = 'forgot-password:' . $request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return $this->error('طلبات كتير، جرّب بعد ' . ceil(RateLimiter::availableIn($key) / 60) . ' دقيقة', 429);
         }
         RateLimiter::hit($key, 600);
 
-        $mailFailed = false;
-        Password::broker('employees')->sendResetLink(
-            ['email' => $request->email],
-            function (Employee $employee, string $token) use (&$mailFailed) {
-                if ($employee->status !== 'نشط') return; // الحساب الموقوف ما بيسترجع
-                try {
-                    Mail::to($employee->email)->send(new \App\Mail\ResetPasswordMail($employee, $token));
-                } catch (\Throwable $e) {
-                    report($e);
-                    $mailFailed = true;
-                }
-            }
-        );
+        $employee = Employee::where('email', trim($request->email))->first();
+        if (!$employee) {
+            return $this->error('هاد الإيميل مش مسجل عندنا، تأكد منه أو تواصل مع الإدارة', 422);
+        }
+        if ($employee->status !== 'نشط') {
+            return $this->error('الحساب موقوف، تواصل مع الإدارة', 422);
+        }
 
-        if ($mailFailed) return $this->error('تعذّر إرسال الإيميل حالياً، تواصل مع الإدارة', 503);
+        $broker = Password::broker('employees');
+        if ($broker->getRepository()->recentlyCreatedToken($employee)) {
+            return $this->error('بعتنالك رابط قبل أقل من دقيقة، شيك على إيميلك أو جرّب بعد دقيقة', 429);
+        }
 
-        return $this->success(null, 'إذا الإيميل مسجل عنا، رح يوصلك رابط لتعيين كلمة مرور جديدة');
+        $token = $broker->createToken($employee);
+        try {
+            Mail::to($employee->email)->send(new \App\Mail\ResetPasswordMail($employee, $token));
+        } catch (\Throwable $e) {
+            report($e);
+            $broker->deleteToken($employee); // حتى ما تنحسب محاولة ناجحة وتنقفل إعادة المحاولة
+            return $this->error('تعذّر إرسال الإيميل حالياً، تواصل مع الإدارة', 503);
+        }
+
+        return $this->success(['email' => $employee->email], 'بعتنالك رابط تعيين كلمة المرور على إيميلك');
     }
 
     // POST /api/auth/reset-password

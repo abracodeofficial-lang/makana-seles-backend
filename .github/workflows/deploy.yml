@@ -38,12 +38,13 @@ jobs:
           MAIL_HOST: ${{ secrets.MAIL_HOST }}
           MAIL_PORT: ${{ secrets.MAIL_PORT }}
           MAIL_ENCRYPTION: ${{ secrets.MAIL_ENCRYPTION }}
+          MAIL_FROM_ADDRESS: ${{ secrets.MAIL_FROM_ADDRESS }}
         with:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: MAIL_USERNAME,MAIL_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_ENCRYPTION
+          envs: MAIL_USERNAME,MAIL_PASSWORD,MAIL_HOST,MAIL_PORT,MAIL_ENCRYPTION,MAIL_FROM_ADDRESS
           script: |
             set -e
             cd ${{ secrets.BACKEND_PATH }}

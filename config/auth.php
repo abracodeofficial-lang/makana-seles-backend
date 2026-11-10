@@ -65,6 +65,12 @@ return [
             'model' => App\Models\User::class,
         ],
 
+        // الموظفين — لاستعادة كلمة المرور بالإيميل
+        'employees' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Employee::class,
+        ],
+
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',
@@ -96,6 +102,13 @@ return [
             'table' => 'password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
+        ],
+
+        'employees' => [
+            'provider' => 'employees',
+            'table' => 'password_reset_tokens',
+            'expire' => 60,   // دقيقة
+            'throttle' => 60, // ثانية بين طلبين لنفس الإيميل
         ],
     ],
 

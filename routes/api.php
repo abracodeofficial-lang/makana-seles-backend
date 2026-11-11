@@ -97,6 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('settings',                          'settings');
         Route::put('settings',                          'updateSettings');
         Route::post('settings/regenerate-feed-token',   'regenerateFeedToken');
+        Route::post('settings/test-wordpress',          'testWordpress');
         Route::get('properties/{id}',                   'show');
         Route::post('properties/{id}/publish',          'publish');
         Route::post('properties/{id}/unpublish',        'unpublish');

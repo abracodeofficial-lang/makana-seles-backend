@@ -232,6 +232,28 @@ class PublishingController extends BaseController
         return $this->success($this->settingsPayload(), 'تم حفظ الإعدادات');
     }
 
+    // POST /api/publishing/settings/test-wordpress (أدمن) — بيفحص الإعدادات المحفوظة مع إضافة Makana Connector
+    public function testWordpress(): JsonResponse
+    {
+        $this->gate('publishing.admin');
+        $s = PublishingSetting::current();
+        if (!$s->wordpress_base_url || !$s->wordpress_username || !$s->wordpress_app_password) {
+            return $this->error('عبّي رابط الموقع واسم المستخدم والـ Application Password واحفظ أول', 422);
+        }
+
+        try {
+            $info = app(\App\Services\Publishing\Platforms\WordPressPublisher::class)->ping();
+        } catch (\App\Services\Publishing\PublishException $e) {
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'rest_no_route') || str_contains($msg, ' 404')) $msg = 'الموقع رد، بس إضافة Makana Connector مش مركّبة أو مش مفعّلة';
+            elseif (str_contains($msg, ' 401') || str_contains($msg, ' 403')) $msg = 'اسم المستخدم أو الـ Application Password غلط، أو المستخدم ما عنده صلاحية محرر/مدير';
+            return $this->error($msg, 422);
+        }
+
+        if (empty($info['ok'])) return $this->error('الموقع رد بشي غير متوقع', 422);
+        return $this->success($info, empty($info['mylisting']) ? 'الاتصال تمام بس قالب MyListing مش مفعّل' : 'الاتصال شغال ✓');
+    }
+
     // POST /api/publishing/settings/regenerate-feed-token (أدمن)
     public function regenerateFeedToken(): JsonResponse
     {

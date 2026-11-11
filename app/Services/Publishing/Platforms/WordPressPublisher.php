@@ -89,7 +89,7 @@ class WordPressPublisher extends BasePublisher
 
         try {
             $request = Http::withBasicAuth((string) $s->wordpress_username, (string) $s->wordpress_app_password)
-                ->acceptJson()->timeout(30);
+                ->acceptJson()->timeout(120); // الإضافة بتنزّل الصور أول مرة
             if ($idempotencyKey) $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);
 
             $response = $request->send($method, $url, $payload ? ['json' => $payload] : []);
@@ -102,6 +102,13 @@ class WordPressPublisher extends BasePublisher
         $detail = Str::limit((string) ($response->json('message') ?? $response->body()), 300);
         $temporary = $response->serverError() || in_array($response->status(), [408, 429], true);
         throw new PublishException("ووردبريس رد بخطأ {$response->status()}: {$detail}", $temporary);
+    }
+
+    // فحص الاتصال بالإضافة (زر "اختبار الاتصال" بإعدادات الربط)
+    public function ping(): array
+    {
+        $response = $this->send('GET', 'ping');
+        return (array) $response->json();
     }
 
     private function settings(): PublishingSetting

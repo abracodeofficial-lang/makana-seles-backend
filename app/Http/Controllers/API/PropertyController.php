@@ -167,6 +167,7 @@ class PropertyController extends BaseController
             // المعلومات الأساسية — الاسم والمالك فقط إلزاميان
             'name'               => 'required|string|max:255',
             'trial_property_code' => 'nullable|string|max:50',
+            'trial_publish_date'  => 'nullable|string|max:100',
             'property_type_id'   => 'required|exists:property_types,id',
             'marketing_type_id'  => 'nullable|exists:marketing_types,id',
             'usage_type_id'      => 'nullable|exists:usage_types,id',
@@ -266,6 +267,7 @@ class PropertyController extends BaseController
         $request->validate([
             'total_area_text'    => 'nullable|string|max:50',
             'trial_property_code' => 'nullable|string|max:50',
+            'trial_publish_date'  => 'nullable|string|max:100',
             'ad_license_expiry'  => 'nullable|date',
             'fal_license_number' => 'nullable|string|max:50',
             'listing_purpose'    => 'nullable|in:بيع,إيجار',

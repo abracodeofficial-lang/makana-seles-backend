@@ -150,7 +150,7 @@ class LeadController extends BaseController
             'source'                => 'required|string',
             'property_type_id'      => 'nullable|exists:property_types,id',
             'direction'             => 'nullable|in:شمالية,جنوبية,شرقية,غربية,شمالية شرقية,شمالية غربية,جنوبية شرقية,جنوبية غربية,وسطى',
-            'trial_publish_date'    => 'nullable|string|max:100',
+            'trial_added_date'      => 'nullable|string|max:100',
             'city_id'               => 'nullable|exists:cities,id',
             'neighborhood_id'       => 'nullable|exists:neighborhoods,id',
             'offered_price'         => 'nullable|numeric',
@@ -185,7 +185,7 @@ class LeadController extends BaseController
             'update_status'  => 'nullable|in:' . implode(',', Lead::UPDATE_STATUSES),
             'update_date'    => 'nullable|date',
             'follow_up_date' => 'nullable|date',
-            'trial_publish_date' => 'nullable|string|max:100',
+            'trial_added_date' => 'nullable|string|max:100',
             'property_ids'   => 'nullable|array',
             'property_ids.*' => 'integer|exists:properties,id',
         ]);

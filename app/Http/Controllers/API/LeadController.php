@@ -141,6 +141,12 @@ class LeadController extends BaseController
         return $this->success($lead);
     }
 
+    private const TRIAL_DATE_MESSAGES = [
+        'trial_added_date.date_format'     => 'تاريخ الإضافة التجريبي لازم يكون تاريخ صحيح',
+        'trial_added_date.after_or_equal'  => 'تاريخ الإضافة التجريبي قديم كتير',
+        'trial_added_date.before_or_equal' => 'تاريخ الإضافة التجريبي ما بصير يكون بالمستقبل',
+    ];
+
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -150,7 +156,7 @@ class LeadController extends BaseController
             'source'                => 'required|string',
             'property_type_id'      => 'nullable|exists:property_types,id',
             'direction'             => 'nullable|in:شمالية,جنوبية,شرقية,غربية,شمالية شرقية,شمالية غربية,جنوبية شرقية,جنوبية غربية,وسطى',
-            'trial_added_date'      => 'nullable|string|max:100',
+            'trial_added_date'      => 'nullable|date_format:Y-m-d|after_or_equal:2000-01-01|before_or_equal:today',
             'city_id'               => 'nullable|exists:cities,id',
             'neighborhood_id'       => 'nullable|exists:neighborhoods,id',
             'offered_price'         => 'nullable|numeric',
@@ -169,7 +175,7 @@ class LeadController extends BaseController
             'update_date'           => 'nullable|date',
             'property_ids'          => 'nullable|array',
             'property_ids.*'        => 'integer|exists:properties,id',
-        ]);
+        ], self::TRIAL_DATE_MESSAGES);
         $data['created_by'] = $request->user()->id;
         unset($data['property_ids']);
         $lead = Lead::create($data);
@@ -185,10 +191,10 @@ class LeadController extends BaseController
             'update_status'  => 'nullable|in:' . implode(',', Lead::UPDATE_STATUSES),
             'update_date'    => 'nullable|date',
             'follow_up_date' => 'nullable|date',
-            'trial_added_date' => 'nullable|string|max:100',
+            'trial_added_date' => 'nullable|date_format:Y-m-d|after_or_equal:2000-01-01|before_or_equal:today',
             'property_ids'   => 'nullable|array',
             'property_ids.*' => 'integer|exists:properties,id',
-        ]);
+        ], self::TRIAL_DATE_MESSAGES);
         $lead->update($request->except(['lead_code', 'created_by', 'property_ids']));
         if ($request->has('property_ids')) $this->syncProperties($lead, $request->input('property_ids') ?? []);
         return $this->success($lead->fresh()->load([self::PROPERTY_SUMMARY, ...self::PROPERTY_SUMMARY_RELS]), 'تم تحديث بيانات المهتم');

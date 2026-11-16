@@ -27,6 +27,7 @@ class Lead extends Model
         'update_date'               => 'date',
         'follow_up_date'            => 'date',
         'visit_date'                => 'date',
+        'trial_added_date'          => 'date:Y-m-d',
         'assigned_to_specialist_at' => 'datetime',
         'budget'                    => 'decimal:2',
         'offered_price'             => 'decimal:2',

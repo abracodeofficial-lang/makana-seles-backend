@@ -10,6 +10,7 @@ class PermissionPages
         return [
             'properties'     => 'العقارات',
             'publishing'     => 'النشر',
+            'marketing'      => 'التصميم والتسويق',
             'owners'         => 'الملاك',
             'leads'          => 'المهتمون',
             'employees'      => 'الموظفون',

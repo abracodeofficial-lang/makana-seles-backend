@@ -13,7 +13,7 @@ class LeadController extends BaseController
     private const REQUEST_STATUSES = ['مفتوح', 'مغلق'];
 
     // بيانات العقار اللي بتنعرض مع المهتم: الكود - الحي - المنطقة - السعر - النوع
-    private const PROPERTY_SUMMARY      = 'properties:id,property_code,property_type_id,city_id,neighborhood_id,listed_price';
+    private const PROPERTY_SUMMARY      = 'properties:id,property_code,trial_property_code,property_type_id,city_id,neighborhood_id,listed_price';
     private const PROPERTY_SUMMARY_RELS = ['properties.propertyType:id,name', 'properties.city:id,name', 'properties.neighborhood:id,name'];
 
     public function applyFilters($query, Request $request)
@@ -213,10 +213,12 @@ class LeadController extends BaseController
         $code = trim((string) $request->query('code', ''));
         if ($code === '') return $this->error('اكتب كود العقار', 422);
 
-        $columns = ['id', 'property_code', 'property_type_id', 'city_id', 'neighborhood_id', 'listed_price'];
+        $columns = ['id', 'property_code', 'trial_property_code', 'property_type_id', 'city_id', 'neighborhood_id', 'listed_price'];
         $with    = ['propertyType:id,name', 'city:id,name', 'neighborhood:id,name'];
 
-        $property = Property::with($with)->where('property_code', $code)->first($columns);
+        $property = Property::with($with)->where('property_code', $code)->first($columns)
+            // أو بالكود التجريبي (بدون فرق بالأحرف الكبيرة/الصغيرة)
+            ?? Property::with($with)->whereRaw('LOWER(trial_property_code) = ?', [mb_strtolower($code)])->first($columns);
         // لو كتب آخر الكود بس (مثلاً 015) وفي عقار واحد بينتهي فيه
         if (!$property) {
             $matches = Property::with($with)->where('property_code', 'like', '%' . $code)->limit(2)->get($columns);

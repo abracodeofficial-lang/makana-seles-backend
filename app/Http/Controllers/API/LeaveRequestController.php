@@ -49,15 +49,33 @@ class LeaveRequestController extends BaseController
 
     public function store(Request $request): JsonResponse
     {
+        $user = $request->user();
+        // HR/المدراء بيقدروا يقدّموا عن موظف تاني (مثلاً إجازة مرضية فاتت)
+        $onBehalf = $request->filled('employee_id') && (int) $request->employee_id !== $user->id;
+        if ($onBehalf && !$user->isAdmin() && !$user->hasPermission('leave_requests', 'approve')) {
+            return $this->error('ما عندك صلاحية تقدّم إجازة عن موظف تاني', 403);
+        }
+
+        $type   = \App\Models\LeaveType::find($request->leave_type_id);
+        $isSick = $type && str_contains($type->name, 'مرض');
+        // الإجازة المرضية بتنقدّم بعد ما تصير (لحد 30 يوم لورا)، والتقديم بالنيابة لحد 60 يوم
+        $earliest = $onBehalf ? today()->subDays(60) : ($isSick ? today()->subDays(30) : today());
+
         $data = $request->validate([
+            'employee_id'   => 'nullable|exists:employees,id',
             'leave_type_id' => 'required|exists:leave_types,id',
-            'from_date'     => 'required|date|after_or_equal:today',
+            'from_date'     => 'required|date|after_or_equal:' . $earliest->toDateString(),
             'to_date'       => 'required|date|after_or_equal:from_date',
             'reason'        => 'required|string',
             'attachment'    => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ], [
+            'from_date.after_or_equal' => $earliest->isToday()
+                ? 'تاريخ البداية لازم يكون اليوم أو بعده'
+                : 'تاريخ البداية قديم كتير (أقدم تاريخ مسموح ' . $earliest->toDateString() . ')',
         ]);
+        unset($data['employee_id']);
 
-        $employee = $request->user();
+        $employee = $onBehalf ? \App\Models\Employee::findOrFail($request->employee_id) : $user;
         $balance  = $employee->getLeaveBalance($data['leave_type_id']);
         $days     = LeaveRequest::calcDays($data['from_date'], $data['to_date']);
 
@@ -73,9 +91,16 @@ class LeaveRequestController extends BaseController
         $data['employee_id'] = $employee->id;
         $req = LeaveRequest::create($data);
 
-        NotificationLog::sendToApprovers('leave_requests', 'طلب إجازة جديد',
-            "قدم {$employee->full_name} طلب إجازة من {$data['from_date']} إلى {$data['to_date']}",
+        $typeName = $type?->name ?? 'إجازة';
+        NotificationLog::sendToApprovers('leave_requests', "طلب {$typeName} جديد",
+            $onBehalf
+                ? "قدّم {$user->full_name} عن {$employee->full_name} طلب {$typeName} من {$data['from_date']} إلى {$data['to_date']} — بانتظار الموافقة"
+                : "قدم {$employee->full_name} طلب {$typeName} من {$data['from_date']} إلى {$data['to_date']}",
             'معلومة', '/leaves');
+        if ($onBehalf) {
+            NotificationLog::send($employee->id, "تم تقديم {$typeName} عنك",
+                "قدّم {$user->full_name} عنك طلب {$typeName} من {$data['from_date']} إلى {$data['to_date']}", 'معلومة', '/leaves');
+        }
 
         return $this->success($req->load('leaveType'), 'تم إرسال طلب الإجازة بنجاح', 201);
     }

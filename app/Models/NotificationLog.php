@@ -32,6 +32,8 @@ class NotificationLog extends Model
             dispatch(fn () => WebPushService::sendToEmployee(
                 $n->employee_id, $n->title, (string) $n->body, $n->url ?: '/notifications', "notif-{$n->id}"
             ))->afterResponse();
+            // وكمان على واتساب الموظف (عبر برنامج المكتب)
+            dispatch(fn () => \App\Services\WhatsAppNotifier::queue($n))->afterResponse();
         });
     }
 

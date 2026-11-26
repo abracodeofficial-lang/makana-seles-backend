@@ -60,8 +60,8 @@ class WaGatewayController extends BaseController
         $settings = $this->authorizeDevice($request);
         $now = Carbon::now($this->tz());
 
-        // الرسائل الفورية (أكواد الاستعادة) أول — بدون إيقاف/ساعات عمل/حد يومي
-        if ($urgent = $this->nextOutbox()) return response()->json(['status' => true, 'job' => $urgent, 'reason' => null]);
+        // الرسائل الفورية أول — بدون ساعات عمل/حد يومي: أكواد الاستعادة دايماً، وإشعارات الموظفين إلا إذا الإرسال موقوف
+        if ($urgent = $this->nextOutbox(!$settings->paused)) return response()->json(['status' => true, 'job' => $urgent, 'reason' => null]);
 
         if ($settings->paused) return $this->idle('الإرسال موقوف من الإعدادات');
 
@@ -133,7 +133,7 @@ class WaGatewayController extends BaseController
         return response()->json(['status' => true]);
     }
 
-    private function nextOutbox(): ?array
+    private function nextOutbox(bool $includeNotifications = true): ?array
     {
         WaOutbox::where('status', 'sending')
             ->where('updated_at', '<', now()->subMinutes(self::STALE_SENDING_MINUTES))
@@ -141,8 +141,11 @@ class WaGatewayController extends BaseController
         WaOutbox::where('status', 'pending')->whereNotNull('expires_at')->where('expires_at', '<=', now())
             ->update(['status' => 'failed', 'error' => 'انتهت صلاحيتها قبل الإرسال']);
 
-        return DB::transaction(function () {
-            $msg = WaOutbox::where('status', 'pending')->orderBy('id')->lockForUpdate()->first();
+        return DB::transaction(function () use ($includeNotifications) {
+            $pending = fn () => WaOutbox::where('status', 'pending')->orderBy('id')->lockForUpdate();
+            // أكواد الاستعادة قبل الإشعارات دايماً
+            $msg = $pending()->where('purpose', '!=', \App\Services\WhatsAppNotifier::PURPOSE)->first()
+                ?? ($includeNotifications ? $pending()->where('purpose', \App\Services\WhatsAppNotifier::PURPOSE)->first() : null);
             if (!$msg) return null;
             $msg->update(['status' => 'sending']);
             return ['id' => -$msg->id, 'phone' => $msg->phone, 'text' => $msg->message];
@@ -192,7 +195,8 @@ class WaGatewayController extends BaseController
             'name'       => $state['name'] ?? null,
             'last_seen'  => $lastSeen?->toIso8601String(),
             'sent_today' => $this->sentToday(),
-            'settings'   => $settings->only(['daily_limit', 'work_start', 'work_end', 'paused']),
+            'settings'   => $settings->only(['daily_limit', 'work_start', 'work_end', 'paused', 'notify_whatsapp']),
+            'notifications_pending' => WaOutbox::where('purpose', \App\Services\WhatsAppNotifier::PURPOSE)->where('status', 'pending')->count(),
             'can_manage' => $this->canManage($request),
         ]);
     }
@@ -206,6 +210,7 @@ class WaGatewayController extends BaseController
             'work_start'  => 'sometimes|date_format:H:i',
             'work_end'    => 'sometimes|date_format:H:i',
             'paused'      => 'sometimes|boolean',
+            'notify_whatsapp' => 'sometimes|boolean',
         ]);
         WaGatewaySetting::current()->update($data);
         return $this->success(null, 'تم حفظ الإعدادات');
